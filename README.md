@@ -1,5 +1,6 @@
 # Idris2-Grin
-GRIN backend for Idris2
+GRIN backend for Idris2  
+Designed to use [this](https://github.com/grin-compiler/grin) grin compiler
 
 ## Contributions wanted
 - [ ] Finish partial functions
