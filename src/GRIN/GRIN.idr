@@ -98,7 +98,13 @@ grinConst = \case
 mkCTag : GRIN.Name -> Tag
 mkCTag = MkTag C
 
+getConstTag : Constant -> Tag
+getConstTag = mkCTag . Grin . \case
+    I _ => "Int"
+    c => assert_total $ idris_crash $ "Internal Error: " ++ show c ++ " is not a literal"
+
 litCon : Constant -> GRIN.Name -> Val
+litCon c var = ConstTagNode (getConstTag c) [Var var]
 
 mkFTag : GRIN.Name -> Tag
 mkFTag = MkTag F
@@ -133,9 +139,7 @@ forget (x :: xs) = x :: forget xs
 showTy : Constant -> String
 showTy = \case
     IntType => "Int"
-    _ => "Error: Not a Type!"
-
-getConstTag : Constant -> Tag
+    c => assert_total $ idris_crash $ "Internal Error: " ++ show c ++ " Not a Type"
 
 addPrimFnToPreamble : PrimFn arity -> Core ()
 addPrimFnToPreamble _ = pure ()
