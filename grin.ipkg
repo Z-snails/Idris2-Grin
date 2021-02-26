@@ -4,7 +4,7 @@ depends = idris2, network, contrib
 
 sourcedir = "src"
 main = Main
-executable = grindris2
+executable = idris2-grin
 
 modules = Main
         , GRIN.Syntax
