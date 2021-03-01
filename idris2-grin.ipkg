@@ -1,0 +1,11 @@
+package grin
+
+depends = idris2, network, contrib
+
+sourcedir = "src"
+main = Main
+executable = idris2-grin
+
+modules = Main
+        , GRIN.Syntax
+        , GRIN.Pretty

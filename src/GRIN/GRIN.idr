@@ -1,5 +1,6 @@
 module GRIN.GRIN
 
+import Data.List
 import Data.Vect
 import Data.String
 import Data.SortedSet
@@ -68,6 +69,19 @@ grinAVar' ANull = Null
 
 grinAVar : AVar -> Val
 grinAVar = Var . grinAVar'
+
+grinLitConst : Constant -> Lit
+grinLitConst = \case
+    I i => LInt i
+    BI i => LWord (cast i)
+    B8 i => LWord (cast i)
+    B16 i => LWord (cast i)
+    B32 i => LWord (cast i)
+    B64 i => LWord (cast i)
+    Ch c => LChar c
+    Str str => LString str
+    Db d => LFloat d
+    c => assert_total $ idris_crash $ "Internal Error: " ++ show c ++ " is not a constant"
 
 grinConst : Constant -> Val
 grinConst = \case
@@ -306,8 +320,7 @@ mutual
         pure $ Alt (NodePat (mkCTag $ grinName name) (Ind <$> args)) !(compileANF exp)
 
     anfConstCase : AConstAlt -> Core Expr
-    anfConstCase (MkAConstAlt const exp) =
-        ?anfConstRHS
+    anfConstCase (MkAConstAlt const exp) = pure $ Alt (LitPat (grinLitConst const)) !(compileANF exp)
 
 ||| List of definitions
 data GrinDefs : Type where
@@ -336,7 +349,7 @@ compileANFDef (name, MkACon tag arity nt) = pure () -- add constructor to eval f
                                                     -- already fully applied so don't add to app
 compileANFDef (name, MkAForeign cc argTy retTy) = -- strip World, parse cc
     case retTy of
-        CFIORes ret => ?io
+        CFIORes ret => let argTy' = filter (\case CFWorld => False ; _ => True) argTy in ?io
         _ => ?pure
 compileANFDef (name, MkAError exp) = do -- add to app functions
     def <- pure $ Def (grinName name) [] !(compileANF exp)
