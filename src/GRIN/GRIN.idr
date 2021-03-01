@@ -101,6 +101,23 @@ mkCTag = MkTag C
 getConstTag : Constant -> Tag
 getConstTag = mkCTag . Grin . \case
     I _ => "Int"
+    BI _ => "Integer"
+    B8 _ => "Bits8"
+    B16 _ => "Bits16"
+    B32 _ => "Bits32"
+    B64 _ => "Bits64"
+    Ch _ => "Char"
+    Str _ => "String"
+    Db _ => "Double"
+    IntType => "Int"
+    IntegerType => "Integer"
+    Bits8Type => "Bits8"
+    Bits16Type => "Bits16"
+    Bits32Type => "Bits32"
+    Bits64Type => "Bits64"
+    CharType => "Char"
+    StringType => "String"
+    DoubleType => "Double"
     c => assert_total $ idris_crash $ "Internal Error: " ++ show c ++ " is not a literal"
 
 litCon : Constant -> GRIN.Name -> Val
@@ -149,22 +166,85 @@ primFnNameMap = Grin . \case
     Add ty => "_prim_add_" ++ showTy ty
     _ => "Not yet implemented"
 
+||| Get the argument types and return type of a PrimFn.
+getTy : PrimFn arity -> Vect (S arity) Constant
+getTy (Add ty) = [ty, ty, ty]
+getTy (Sub ty) = [ty, ty, ty]
+getTy (Mul ty) = [ty, ty, ty]
+getTy (Div ty) = [ty, ty, ty]
+getTy (Mod ty) = [ty, ty, ty]
+getTy (Neg ty) = [ty, ty]
+getTy (ShiftL ty) = [ty, ty, ty]
+getTy (ShiftR ty) = [ty, ty, ty]
+getTy (BAnd ty) = [ty, ty, ty]
+getTy (BOr ty) = [ty, ty, ty]
+getTy (BXOr ty) = [ty, ty, ty]
+getTy (LT ty) = [ty, ty, IntType]
+getTy (LTE ty) = [ty, ty, IntType]
+getTy (GT ty) = [ty, ty, IntType]
+getTy (GTE ty) = [ty, ty, IntType]
+getTy (EQ ty) = [ty, ty, IntType]
+getTy StrLength = [StringType, IntType]
+getTy StrHead = [StringType, CharType]
+getTy StrTail = [StringType, CharType]
+getTy StrIndex = [StringType, IntType, CharType]
+getTy StrCons = [CharType, StringType, StringType]
+getTy StrAppend = [StringType, StringType, StringType]
+getTy StrReverse = [StringType, StringType]
+getTy StrSubstr = [IntType, IntType, StringType, StringType]
+getTy DoubleExp = [DoubleType, DoubleType]
+getTy DoubleLog = [DoubleType, DoubleType]
+getTy DoubleSin = [DoubleType, DoubleType]
+getTy DoubleCos = [DoubleType, DoubleType]
+getTy DoubleTan = [DoubleType, DoubleType]
+getTy DoubleASin = [DoubleType, DoubleType]
+getTy DoubleACos = [DoubleType, DoubleType]
+getTy DoubleATan = [DoubleType, DoubleType]
+getTy DoubleSqrt = [DoubleType, DoubleType]
+getTy DoubleFloor = [DoubleType, DoubleType]
+getTy DoubleCeiling = [DoubleType, DoubleType]
+getTy (Cast from to) = [from, to]
+getTy BelieveMe = assert_total $ idris_crash "Internal Error: BelieveMe not caught by primFnS"
+getTy Crash = assert_total $ idris_crash "Internal Error: Crash not caught by primFnS"
+
 primFnS : PrimFn arity -> Vect arity AVar -> Core Expr -- add to apply
-primFnS (Add ty) [x, y] = do -- abstract to unary, binary, ternary
-    addPrimFnToPreamble (Add ty)
+primFnS prim [x] = do
+    addPrimFnToPreamble prim
+    let x' = nextName $ grinAVar' x
+    pure $ Bind (litCon (index 0 $ getTy prim) x') (eval $ grinAVar x)
+         $ Bind (Var (Grin "ret")) (App (primFnNameMap prim) [Var x'])
+         $ Pure $ litCon (index 1 $ getTy prim) (Grin "ret")
+primFnS Crash [_, msg] = do
+    let msg' = nextName $ grinAVar' msg
+    pure $ Bind (litCon StringType msg') (eval $ grinAVar msg)
+         $ App (Grin "crash") [Var msg']
+primFnS prim [x, y] = do
+    addPrimFnToPreamble prim
     let x' = nextName $ grinAVar' x
     let y' = nextName $ grinAVar' y
-    pure $ Bind (litCon ty x') (eval $ grinAVar x)
-         $ Bind (litCon ty y') (eval $ grinAVar y)
-         $ App (primFnNameMap $ Add ty) [Var x', Var y']
+    pure $ Bind (litCon (index 0 $ getTy prim) x') (eval $ grinAVar x)
+         $ Bind (litCon (index 1 $ getTy prim) y') (eval $ grinAVar y)
+         $ Bind (Var (Grin "ret")) (App (primFnNameMap prim) [Var x', Var y'])
+         $ Pure $ litCon (index 2 $ getTy prim) (Grin "ret")
+primFnS BelieveMe [_, _, x] = pure $ Pure $ grinAVar x
+primFnS prim [x, y, z] = do
+    addPrimFnToPreamble prim
+    let x' = nextName $ grinAVar' x
+    let y' = nextName $ grinAVar' y
+    let z' = nextName $ grinAVar' z
+    pure $ Bind (litCon (index 0 $ getTy prim) x') (eval $ grinAVar x)
+         $ Bind (litCon (index 1 $ getTy prim) y') (eval $ grinAVar y)
+         $ Bind (litCon (index 2 $ getTy prim) z') (eval $ grinAVar z)
+         $ Bind (Var (Grin "ret")) (App (primFnNameMap prim) [Var x', Var y', Var z'])
+         $ Pure $ litCon (index 3 $ getTy prim) (Grin "ret")
 primFnS _ _ = assert_total $ idris_crash "Not yet implemented"
 
-primFnL : PrimFn arity -> Vect arity AVar -> Core Expr -- call primFnS to add to apply
+primFnL : PrimFn arity -> Vect arity AVar -> Core Expr -- call and discard primFnS to add fn to apply
 primFnL fn args = do
     ignore $ primFnS fn args
     pure $ Pure (Var $ primFnNameMap fn)
 
-primFnInf : PrimFn arity -> Vect arity AVar -> Core Expr -- call primFnS to add to apply
+primFnInf : PrimFn arity -> Vect arity AVar -> Core Expr -- call and discard primFnS to add fn to apply
 primFnInf fn args = do
     ignore $ primFnS fn args
     pure $ Pure (Var $ primFnNameMap fn)
