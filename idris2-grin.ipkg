@@ -9,3 +9,4 @@ executable = idris2-grin
 modules = Main
         , GRIN.Syntax
         , GRIN.Pretty
+        , GRIN.GRIN
