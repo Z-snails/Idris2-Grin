@@ -3,19 +3,24 @@ module GRIN.Pretty
 import Data.String
 import Data.List
 
+import Core.Name
+
 import GRIN.Syntax
 
-||| Diff List allowing for O(1) appending
+||| Number of spaces to indent.
+indentSize : Nat
+indentSize = 4
+
+||| Diff List allowing for O(1) appending.
 data DList a = MkDList (List a -> List a)
 
 Semigroup (DList a) where
     MkDList l <+> MkDList r = MkDList (l . r)
 
-
 Monoid (DList a) where
     neutral = MkDList id
 
-||| Diff List of Strings
+||| Diff List of Strings, for O(1) appending.
 Builder : Type
 Builder = DList String
 
@@ -25,230 +30,171 @@ FromString Builder where
 fromChar : Char -> Builder
 fromChar = fromString . cast
 
-escapedString : String -> Builder
-escapedString = concat . map escapeChar . fastUnpack
-  where
-    escapeChar : Char -> Builder
-    escapeChar = \case
-        '"' => "\""
-        '\\' => "\\\\"
-        '\a' => "\\a"
-        '\b' => "\\b"
-        '\f' => "\\f"
-        '\n' => "\\n"
-        '\r' => "\\r"
-        '\t' => "\\t"
-        '\v' => "\\v"
+escapedChar : Char -> Builder
+escapedChar = \case
+    '\"' => "\\\""
+    '\\' => "\\\\"
+    '\a' => "\\a"
+    '\b' => "\\b"
+    '\f' => "\\f"
+    '\n' => "\\n"
+    '\r' => "\\r"
+    '\t' => "\\t"
+    '\v' => "\\v"
+    c => fromChar c
 
-        c => fromChar c
+||| Pretty print a string with escape characters.
+escapedString : String -> Builder
+escapedString = concat . map escapedChar . fastUnpack
 
 infixl 6 <->
 
-||| Append two builder 
+||| Append two builder.
 (<->) : Builder -> Builder -> Builder
-MkDList l <-> MkDList r = MkDList (l . (" " ::) . r)
+l <-> r = l <+> " " <+> r
 
-||| Convert something with a Show instance to a Builder
+spaceSep : Foldable t => t Builder -> Builder
+spaceSep = foldMap (" " <+>)
+
+nlSep : Foldable t => t Builder -> Builder
+nlSep = foldMap ("\n" <+>)
+
+bracket : Builder -> Builder
+bracket b = "(" <+> b <+> ")"
+
+indent : Nat -> Builder
+indent Z = ""
+indent (S k) = " " <+> indent k
+
+||| Convert something with a Show instance to a Builder.
 showB : Show a => a -> Builder
 showB = fromString . show
 
-||| Run a Builder returning a String
+||| Run a Builder returning a String.
 export
 runBuilder : Builder -> String
 runBuilder (MkDList strs) = fastAppend (strs [])
 
-||| Append a list of Builders seperated by sep
-intercalate : Builder -> List Builder -> Builder
-intercalate _ [] = neutral
-intercalate _ [x] = x
-intercalate sep (x :: xs) = x <+> go sep xs
-  where
-    go : Builder -> List Builder -> Builder
-    go _ [] = neutral
-    go sep (x :: xs) = x <+> sep <+> go sep xs
-
-spaceSep : List Builder -> Builder
-spaceSep = intercalate " "
-
-||| Put braces round a Builder
-braces : Builder -> Builder
-braces b = "{" <+> b <+> "}"
-
-||| Put brackets round a Builder
-bracket : Builder -> Builder
-bracket b = "(" <+> b <+> ")"
-
-||| Repeat a Char some number of times
-repeat : Nat -> Char -> Builder
-repeat n c = fromString $ fastPack $ replicate n c
-
-||| Indent a builder n spaces
-indent : {ind : Nat} -> Builder -> Builder
-indent {ind} b = repeat ind ' ' <+> b
-
-||| Pretty print a primitive Name
-export
-prettyPrimName : PrimName -> Builder
-prettyPrimName = \case
-    World => "World"
-    WorldTy => "WorldTy"
-    IntTy => "IntTy"
-    IntegerTy => "IntegerTy"
-    Bits8Ty => "Bits8Ty"
-    Bits16Ty => "Bits16Ty"
-    Bits32Ty => "Bits32Ty"
-    Bits64Ty => "Bits64Ty"
-    CharTy => "CharTy"
-    StringTy => "StringTy"
-    DoubleTy => "DoubleTy"
-
-||| Pretty print a Name
-export
+||| Pretty print a grin name.
 prettyName : Name -> Builder
-prettyName (User name) = "u_" <+> fromString name
-prettyName (Ind i) = "v_" <+> showB i
-prettyName (Gen name i) = prettyName name <+> "_" <+> showB i
-prettyName (Grin name) = fromString name
-prettyName Null = "null"
-prettyName (Prim name) = "prim_" <+> prettyPrimName name
+prettyName (NS ns n) = showB ns <+> "." <+> prettyName n
+prettyName (UN n) = fromString n
+prettyName (MN n i) = fromString n <+> "." <+> showB i
+prettyName (PV n i) = "pv_" <+> prettyName n <+> "." <+> showB i
+prettyName (DN n _) = "dn_" <+> fromString n
+prettyName (RF n) = "rf_" <+> fromString n
+prettyName (Nested (x, y) n) = "n" <+> showB x <+> showB y <+> "_" <+> prettyName n
+prettyName (CaseBlock n i) = "cb" <+> showB i <+> "_" <+> fromString n
+prettyName (WithBlock n i) = "wb" <+> showB i <+> "_" <+> fromString n
+prettyName (Resolved i) = showB i
 
-||| Pretty print a Simple Type
-export
-prettySimpleTy : SimpleTy -> Builder
-prettySimpleTy = \case
-    TInt => "T_Int64"
-    TWord => "T_Word64"
-    TFloat => "T_Float"
-    TBool => "T_Bool"
-    TUnit => "T_Unit"
-    TChar => "T_Char"
-    TString => "T_String"
-    TDead => "T_Dead"
+||| Pretty print a grin variable.
+prettyGrinVar : GrinVar -> Builder
+prettyGrinVar (Anf x) = "a" <+> showB x
+prettyGrinVar (Var x) = "v" <+> showB x
+prettyGrinVar (Fixed n) = "n" <+> prettyName n
+prettyGrinVar (Grin n) = fromString n
 
-||| Pretty print a type
-export
-prettyTy : Ty -> Builder
-prettyTy (TyCon name args) = braces
-    (prettyName name <-> spaceSep (prettyTy <$> args))
-prettyTy (TyVar name) = "%" <+> prettyName name
-prettyTy (TySimple simple) = prettySimpleTy simple
+||| Pretty print a tag type.
+||| Takes builder to make into a tag.
+prettyTagType : TagType -> Builder -> Builder
+prettyTagType Con n = "\"C" <+> n <+> "\""
+prettyTagType Thunk n = "\"F" <+> n <+> "\""
+prettyTagType InfThunk n = "\"FInf" <+> n <+> "\""
+prettyTagType (Missing missing) n = "\"P" <+> n <+> "_" <+> showB missing <+> "\""
 
-||| Pretty print if a function is builtin
-export
-prettyBuiltin : Bool -> Builder
-prettyBuiltin False = "ffi"
-prettyBuiltin True = "primop"
-
-||| Pretty print if a function is effectful
-export
-prettyEffect : Bool -> Builder
-prettyEffect False = "pure"
-prettyEffect True = "effectful"
-
-||| Pretty print external function info
-export
-prettyExternal : External -> Builder
-prettyExternal (MkExternal{name, retTy, argTy, builtin, effect}) =
-    prettyBuiltin builtin <-> prettyEffect effect
-    <+> indent {ind = 4}
-        ( prettyName name
-        <-> "::"
-        <-> intercalate " -> " (prettyTy <$> argTy)
-        <+> " -> " <+> prettyTy retTy
-        )
-
-||| Pretty print a tag
-export
+||| Pretty print a tag.
 prettyTag : Tag -> Builder
-prettyTag (MkTag{type, name}) = case type of
-    C => "C" <+> prettyName name
-    F => "F" <+> prettyName name
-    FInf => "FInf" <+> prettyName name
-    P missing => "P" <+> prettyName name <+> "_" <+> showB missing
+prettyTag (MkTag{tagType, tagName}) =
+    prettyTagType tagType $ prettyName tagName
 
-||| Pretty print a literal
-export
-prettyLit : Lit -> Builder
-prettyLit = \case
+||| Pretty print a GRIN literal.
+prettyGrinLit : GrinLit -> Builder
+prettyGrinLit = \case
     LInt i => showB i
-    LWord w => showB w
-    LFloat f => showB f
-    LBool True => "#True"
-    LBool False => "#False"
-    LChar c => "#'" <+> fromChar c <+> "'"
-    LString str => "#\"" <+> escapedString str <+> "\""
+    LBits64 i => showB i <+> "u"
+    LDouble d => showB d
+    LChar c => "#'" <+> escapedChar c <+> "'"
+    LString s => "#\"" <+> escapedString s <+> "\""
 
-||| Pretty print a value
-export
+||| Pretty print a simple type.
+prettySimpleType : SimpleType -> Builder
+prettySimpleType = \case
+    IntTy => "T_Int6indentSize"
+    Bits64Ty => "T_Word6indentSize"
+    DoubleTy => "T_Float"
+    CharTy => "T_Char"
+    StringTy => "T_String"
+
+||| Pretty print a GRIN type.
+prettyGrinType : GrinType -> Builder
+prettyGrinType (TyCon var args) =
+    prettyGrinVar var <+> spaceSep (prettyGrinType <$> args)
+prettyGrinType (TySimple ty) = prettySimpleType ty
+
+||| Pretty print a simple value.
+prettySimpleVal : SimpleVal -> Builder
+prettySimpleVal (SLit lit) = prettyGrinLit lit
+prettySimpleVal (SVar var) = prettyGrinVar var
+
+||| Pretty print a GRIN value.
 prettyVal : Val -> Builder
-prettyVal (ConstTagNode tag args) =
-    bracket
-        ( prettyTag tag
-        <-> spaceSep (prettyVal <$> args)
-        )
-prettyVal (VarTagNode name args) =
-    bracket
-        ( prettyName name
-        <-> spaceSep (prettyVal <$> args)
-        )
-prettyVal (ValTag tag) = prettyTag tag
-prettyVal VUnit = "()"
-prettyVal (VLit lit) = prettyLit lit
-prettyVal (Var name) = prettyName name
-prettyVal (Undefined ty) =
-    bracket
-        ( "#undefined ::" <-> prettyTy ty )
+prettyVal (VTagNode tag args) =
+    prettyTag tag <+> spaceSep (prettySimpleVal <$> args)
+prettyVal (VTag tag) = prettyTag tag
+prettyVal (VSimpleVal val) = prettySimpleVal val
 
-||| Pretty print a case pattern
-export
-prettyCPat : CPat -> Builder
-prettyCPat (NodePat tag args) =
-    prettyTag tag <-> spaceSep (prettyName <$> args)
+||| Pretty print a case pattern.
+prettyCPat : CasePat -> Builder
+prettyCPat (NodePat tag args) = prettyTag tag <+> spaceSep (prettyVal <$> args)
 prettyCPat (TagPat tag) = prettyTag tag
-prettyCPat (LitPat lit) = prettyLit lit
-prettyCPat DefaultPat = "#default"
+prettyCPat (LitPat lit) = prettyGrinLit lit
+prettyCPat Default = "#default"
 
-||| Pretty print an Expr
-export
-prettyExpr : {default 0 ind : Nat} -> Expr -> Builder
+mutual
+    ||| Pretty print a simple expression.
+    prettySimpleExp : (indent : Nat) -> SimpleExp -> Builder
+    prettySimpleExp ind (Do exp) = "do\n" <+> prettyGrinExp (ind + indentSize) exp
+    prettySimpleExp ind (App f args) =
+        prettyGrinVar f <+> spaceSep (prettyGrinVar <$> args)
+    prettySimpleExp ind (Pure val) = "pure" <-> bracket (prettyVal val)
+    prettySimpleExp ind (Store val) = "store" <-> bracket (prettyVal val)
+    prettySimpleExp ind (Fetch var) = "fetch" <-> prettyGrinVar var
+    prettySimpleExp ind (Update var val) =
+        "update" <-> prettyGrinVar var <-> bracket (prettyVal val)
 
-prettyExpr (Prog externs defs) =
-    intercalate "\n" (prettyExternal <$> externs)
-    <+> "\n"
-    <+> intercalate "\n" (prettyExpr <$> defs)
+    ||| Pretty print a GRIN expression.
+    prettyGrinExp : (indent : Nat) -> GrinExp -> Builder
+    prettyGrinExp ind (Bind val exp rest) =
+        prettyVal val <-> "<-" <-> prettySimpleExp ind exp <+> "\n"
+        <+> prettyGrinExp ind rest
+    prettyGrinExp ind (Case val alts) =
+        "case" <-> prettyVal val <-> "of"
+        <+> nlSep (prettyGrinAlt ind <$> alts)
+    prettyGrinExp ind (Simple exp) = prettySimpleExp ind exp
+    
+    prettyGrinAlt : (indent : Nat) -> GrinAlt -> Builder
+    prettyGrinAlt ind (MkAlt pat exp) =
+        indent ind <+> prettyCPat pat <-> "->" <-> prettyGrinExp ind exp
 
-prettyExpr (Def name args expr) =
-    prettyName name
-    <-> spaceSep (prettyName <$> args)
-    <-> "=\n"
-    <+> indent {ind = 4 + ind}
-        ( prettyExpr {ind = 4 + ind} expr )
+||| Pretty print a top level definition.
+prettyGrinDef : GrinDef -> Builder
+prettyGrinDef (MkDef n args exp) =
+    prettyGrinVar n <+> spaceSep (prettyGrinVar <$> args)
+    <-> "=\n" <+> prettyGrinExp indentSize exp
 
-prettyExpr (Bind val rhs rest) =
-    prettyVal val
-    <-> "<-" <-> prettyExpr {ind} rhs
-    <+> "\n" <+> indent {ind} (prettyExpr {ind} rest)
-prettyExpr (Discard rhs rest) =
-    prettyExpr {ind} rhs
-    <+> "\n" <+> indent {ind} (prettyExpr {ind} rest)
-prettyExpr (Case val alts) =
-    "case" <-> prettyVal val <-> "of\n"
-    <+> intercalate "\n"
-        ( indent {ind = 4 + ind}
-        . prettyExpr {ind = 4 + ind}
-        <$> alts
-        )
+||| Pretty print external information.
+prettyExternal : (indent : Nat) -> External -> Builder
+prettyExternal ind ext =
+    indent ind <+> spaceSep (prettyGrinType <$> ext.argTy) <->
+    prettyGrinType ext.retTy
 
-prettyExpr (App name args) = 
-    bracket
-        (prettyName name <-> spaceSep (prettyVal <$> args)
-        )
-prettyExpr (Pure val) = "pure" <-> prettyVal val
-prettyExpr (Store val) = "store" <-> prettyVal val
-prettyExpr (Fetch name) = "fetch" <-> prettyName name
-prettyExpr (Update name val) = "update" <-> prettyName name <-> prettyVal val
-
-prettyExpr (Alt pat rhs) =
-    prettyCPat pat <-> "->"
-    <+> "\n" <+> indent {ind = 4 + ind}
-        ( prettyExpr {ind = 4 + ind} rhs )
+||| Pretty print an entire program.
+prettyProg : GrinProg -> Builder
+prettyProg (MkProg exts defs) =
+    let (primPure, primEff, ffiPure, ffiEff) = splitExterns exts in
+    "\nprimop pure" <+> nlSep (prettyExternal indentSize <$> primPure) <+>
+    "\nprimop effectful" <+> nlSep (prettyExternal indentSize <$> primPure) <+>
+    "\nffi pure" <+> nlSep (prettyExternal indentSize <$> primPure) <+>
+    "\nffi effectful" <+> nlSep (prettyExternal indentSize <$> primPure) <+>
+    "\n" <+> nlSep (prettyGrinDef <$> defs)

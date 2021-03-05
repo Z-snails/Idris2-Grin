@@ -6,4 +6,6 @@ import Compiler.Common
 
 
 main : IO ()
-main = mainWithCodegens [("grin", grin)]
+main =
+    pure ()
+    -- mainWithCodegens [("grin", grin)]

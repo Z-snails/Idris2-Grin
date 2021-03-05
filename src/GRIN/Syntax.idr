@@ -1,156 +1,177 @@
 module GRIN.Syntax
 
-||| Primitive names
+import Core.Name
+
+||| Grin variable.
 public export
-data PrimName
-    = World
-    | WorldTy
-    | IntTy
-    | IntegerTy
-    | Bits8Ty
-    | Bits16Ty
-    | Bits32Ty
-    | Bits64Ty
-    | CharTy
-    | StringTy
-    | DoubleTy
+data GrinVar : Type where
+    ||| ANF index.
+    -- used to make generating new names easier.
+    Anf : Int -> GrinVar
+    ||| Local variable.
+    Var : Int -> GrinVar
+    ||| Known variable (e.g. functions or constructors).
+    Fixed : Name -> GrinVar
+    ||| Grin function.
+    Grin : String -> GrinVar
 
-
-||| A GRIN name
+||| Type of a tag (constructor).
 public export
-data Name
-    = ||| User generated name u_<String>
-        User String
-    | ||| Name index v_<Int>
-        Ind Int
-    | ||| Generated variable based on existing name
-        Gen Name Int
-    | ||| Name as displayed in grin output
-        Grin String
-    | ||| Null (I don't know what it does in ANF)
-        Null
-    | ||| Primitive type constructors or world
-        Prim PrimName
+data TagType : Type where
+    ||| Normal constructor.
+    Con : TagType
+    ||| Lazy thunk.
+    Thunk : TagType
+    ||| Inf thunk.
+    InfThunk : TagType
+    ||| Partially applied function.
+    Missing : (missing : Nat) -> TagType
 
-||| Generate a name based on an existing name
-export
-nextName : Name -> Name
-nextName (Gen name i) = Gen name (i + 1)
-nextName name = Gen name 0
-
-||| Modify a user name
-export
-mapUN : (String -> String) -> Name -> Name
-mapUN f (User name) = User (f name)
-mapUN _ name = name
-
-||| Simple/Builtin Type
-public export
-data SimpleTy
-    = TInt
-    | TWord
-    | TFloat
-    | TBool
-    | TUnit
-    | TChar
-    | TString
-    | TDead
-
-||| Type
-public export
-data Ty
-    = TyCon Name (List Ty)
-    | TyVar Name
-    | TySimple SimpleTy
-
-||| Info about an external function
-public export
-record External where
-    constructor MkExternal
-    ||| Name of external function
-    name : Name
-    ||| Return type of the function
-    retTy : Ty
-    ||| Type of arguments to the function
-    argTy : List Ty
-    ||| Is function builtin
-    builtin : Bool
-    ||| Is function effectful
-    effect : Bool
-
-||| Type of a Tag
-public export
-data TagType
-    = ||| Actual constructor
-        C
-    | ||| Unevaluated thunk
-        F
-    | ||| Unevaluated infinite thunk
-        FInf
-    | ||| Partially applied function with missing paramter count
-        P Nat
-
-||| Full Tag
+||| Constructor.
 public export
 record Tag where
     constructor MkTag
-    ||| What sort of tag
-    type : TagType
-    ||| Name of tag
-    name : Name
+    ||| Type of tag.
+    tagType : TagType
+    ||| name
+    tagName : Name
 
-||| Literal
+||| Literal in GRIN.
+||| Note there is no Bool literal because Idris removes it
 public export
-data Lit : Type where
-    LInt : Int -> Lit
-    LWord : Bits64 -> Lit
-    LFloat : Double -> Lit
-    LBool : Bool -> Lit
-    LChar : Char -> Lit
-    LString : String -> Lit
+data GrinLit : Type where
+    LInt : Int -> GrinLit
+    LBits64 : Bits64 -> GrinLit
+    LDouble : Double -> GrinLit
+    LChar : Char -> GrinLit
+    LString : String -> GrinLit
 
-
-||| Type of a value
+||| Builtin GRIN type.
+-- if GRIN all the way to LLVM is added to this
+-- add Bits8, 16 etc.
 public export
-data ValType
-    = AnyVal
-    | SimpleVal
+data SimpleType : Type where
+    IntTy : SimpleType
+    Bits64Ty : SimpleType
+    DoubleTy : SimpleType
+    CharTy : SimpleType
+    StringTy : SimpleType
 
-||| Value
+||| GRIN type.
+public export
+data GrinType : Type where
+    TyCon : GrinVar -> List GrinType -> GrinType
+    TySimple : SimpleType -> GrinType
+
+||| A simple GRIN value.
+public export
+data SimpleVal : Type where
+    ||| Grin literal.
+    SLit : GrinLit -> SimpleVal
+    ||| Variable.
+    SVar : GrinVar -> SimpleVal
+
+||| A GRIN value.
 public export
 data Val : Type where
-    ConstTagNode : Tag -> List Val -> Val
-    VarTagNode : Name -> List Val -> Val
-    ValTag : Tag -> Val
-    VUnit : Val
+    ||| A constructor applied to arguments.
+    VTagNode : Tag -> List SimpleVal -> Val
+    ||| A constructor with no arguments.
+    VTag : Tag -> Val
+    ||| A simple value.
+    VSimpleVal : SimpleVal -> Val
 
-    VLit : Lit -> Val
-    Var : Name -> Val
-    Undefined : Ty -> Val
-
-||| Pattern in case
+||| Grin literal.
 public export
-data CPat
-    = NodePat Tag (List Name)
-    | TagPat Tag
-    | LitPat Lit
-    | DefaultPat
+VLit : GrinLit -> Val 
+VLit = VSimpleVal . SLit
 
-||| Expression, Program or Definition
+||| Variable.
 public export
-data Expr : Type where
-    Prog : List External -> List Expr -> Expr 
+VVar : GrinVar -> Val
+VVar = VSimpleVal . SVar
 
-    Def : Name -> List Name -> Expr -> Expr
+||| Pattern in a case statement.
+public export
+data CasePat : Type where
+    NodePat : Tag -> List Val -> CasePat
+    TagPat : Tag -> CasePat
+    LitPat : GrinLit -> CasePat
+    Default : CasePat
 
-    Bind : Val -> Expr -> Expr -> Expr
-    Discard : Expr -> Expr -> Expr
-    Case : Val -> List Expr -> Expr
+mutual
+    ||| Simple GRIN expression.
+    public export
+    data SimpleExp : Type where
+        ||| Makes pretty printing easier.
+        Do : GrinExp -> SimpleExp
+        ||| Apply a known function.
+        App : GrinVar -> List GrinVar -> SimpleExp
+        ||| Pure value.
+        Pure : Val -> SimpleExp
+        ||| Store a value in memory
+        Store : Val -> SimpleExp
+        ||| Fetch a value from memory
+        Fetch : GrinVar -> SimpleExp
+        ||| Update a value in memory
+        Update : GrinVar -> Val -> SimpleExp
 
-    App : Name -> List Val -> Expr
-    Pure : Val -> Expr
-    Store : Val -> Expr
-    Fetch : Name -> Expr
-    Update : Name -> Val -> Expr
+    ||| GRIN expression.
+    public export
+    data GrinExp : Type where
+        ||| Bind an expression to a value.
+        Bind : Val -> SimpleExp -> GrinExp -> GrinExp
+        ||| Case statement.
+        Case : Val -> List GrinAlt -> GrinExp
+        ||| A Simple Expression.
+        Simple : SimpleExp -> GrinExp
+    
+    ||| Alternative in a case statement.
+    public export
+    data GrinAlt : Type where
+        MkAlt : CasePat -> GrinExp -> GrinAlt
 
-    Alt : CPat -> Expr -> Expr
+||| Top level GRIN definition.
+public export
+data GrinDef : Type where
+    MkDef :
+        GrinVar -> -- should only be Fixed or Grin
+        (args : List GrinVar) ->
+        GrinExp ->
+        GrinDef
+
+||| Information about an external function.
+public export
+record External where
+    constructor MkExt
+    ||| Name of the external function.
+    name : GrinVar
+    ||| Return type of the function
+    retTy : GrinType
+    ||| Argument types
+    argTy : List GrinType
+    ||| Effectful?
+    effect : Bool
+    ||| Is it built in to GRIN
+    builtin : Bool
+
+||| Split a list of external functions into each type.type
+||| (builtin pure, builtin effectful, ffi pure, ffi effectful)
+export
+splitExterns : List External -> (List External, List External, List External, List External)
+splitExterns [] = ([], [], [], [])
+splitExterns (x :: xs) =
+    let (primPure, primEff, ffiPure, ffiEff) = splitExterns xs
+    in case (x.builtin, x.effect) of
+        (True, False) => (x :: primPure, primEff, ffiPure, ffiEff)
+        (True, True) => (primPure, x :: primEff, ffiPure, ffiEff)
+        (False, False) => (primPure, primEff, x :: ffiPure, ffiEff)
+        (False, True) => (primPure, primEff, ffiPure, x :: ffiEff)
+
+||| Entire GRIN program.
+public export
+data GrinProg : Type where
+    MkProg :
+        List External ->
+        List GrinDef ->
+        GrinProg
