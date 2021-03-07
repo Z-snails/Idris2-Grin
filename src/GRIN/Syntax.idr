@@ -5,15 +5,13 @@ import Core.Name
 ||| Grin variable.
 public export
 data GrinVar : Type where
-    ||| ANF index.
-    -- used to make generating new names easier.
-    Anf : Int -> GrinVar
     ||| Local variable.
     Var : Int -> GrinVar
     ||| Known variable (e.g. functions or constructors).
     Fixed : Name -> GrinVar
     ||| Grin function.
-    Grin : String -> GrinVar
+    Grin : String -> GrinVar -- Note: never start a `Grin` var with v
+                             -- as this can clash with `Fixed` `GrinVar`s
 
 ||| Type of a tag (constructor).
 public export
@@ -47,8 +45,7 @@ data GrinLit : Type where
     LString : String -> GrinLit
 
 ||| Builtin GRIN type.
--- if GRIN all the way to LLVM is added to this
--- add Bits8, 16 etc.
+-- Hopefully native Bits<n> types will be added to GRIN
 public export
 data SimpleType : Type where
     IntTy : SimpleType
@@ -70,6 +67,8 @@ data SimpleVal : Type where
     SLit : GrinLit -> SimpleVal
     ||| Variable.
     SVar : GrinVar -> SimpleVal
+    ||| Signals result of rhs is discarded
+    SIgnore : SimpleVal
 
 ||| A GRIN value.
 public export
@@ -90,6 +89,11 @@ VLit = VSimpleVal . SLit
 public export
 VVar : GrinVar -> Val
 VVar = VSimpleVal . SVar
+
+||| Signals result of rhs is discarded
+public export
+VIgnore : Val
+VIgnore = VSimpleVal SIgnore
 
 ||| Pattern in a case statement.
 public export

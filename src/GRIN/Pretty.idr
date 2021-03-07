@@ -90,7 +90,6 @@ prettyName (Resolved i) = showB i
 
 ||| Pretty print a grin variable.
 prettyGrinVar : GrinVar -> Builder
-prettyGrinVar (Anf x) = "a" <+> showB x
 prettyGrinVar (Var x) = "v" <+> showB x
 prettyGrinVar (Fixed n) = "n" <+> prettyName n
 prettyGrinVar (Grin n) = fromString n
@@ -136,6 +135,7 @@ prettyGrinType (TySimple ty) = prettySimpleType ty
 prettySimpleVal : SimpleVal -> Builder
 prettySimpleVal (SLit lit) = prettyGrinLit lit
 prettySimpleVal (SVar var) = prettyGrinVar var
+prettySimpleVal SIgnore = "Error: Ignore not caught by prettySimpleExp"
 
 ||| Pretty print a GRIN value.
 prettyVal : Val -> Builder
@@ -165,6 +165,9 @@ mutual
 
     ||| Pretty print a GRIN expression.
     prettyGrinExp : (indent : Nat) -> GrinExp -> Builder
+    prettyGrinExp ind (Bind (VSimpleVal SIgnore) exp rest) =
+        prettySimpleExp ind exp <+> "\n"
+        <+> prettyGrinExp ind rest
     prettyGrinExp ind (Bind val exp rest) =
         prettyVal val <-> "<-" <-> prettySimpleExp ind exp <+> "\n"
         <+> prettyGrinExp ind rest
