@@ -13,6 +13,23 @@ data GrinVar : Type where
     Grin : String -> GrinVar -- Note: never start a `Grin` var with v
                              -- as this can clash with `Fixed` `GrinVar`s
 
+export
+Eq GrinVar where
+    Var i == Var j = i == j
+    Fixed n == Fixed m = n == m
+    Grin n == Grin m = n == m
+    _ == _ = False
+
+export
+Ord GrinVar where
+    compare (Var i) (Var j) = compare i j
+    compare (Var _) _ = LT
+    compare _ (Var _) = GT
+    compare (Fixed n) (Fixed m) = compare n m
+    compare (Fixed _) _ = LT
+    compare _ (Fixed _) = GT
+    compare (Grin n) (Grin m) = compare n m
+
 ||| Type of a tag (constructor).
 public export
 data TagType : Type where
@@ -32,7 +49,7 @@ record Tag where
     ||| Type of tag.
     tagType : TagType
     ||| name
-    tagName : Name
+    tagName : Either Name String
 
 ||| Literal in GRIN.
 ||| Note there is no Bool literal because Idris removes it
@@ -139,7 +156,7 @@ mutual
 public export
 data GrinDef : Type where
     MkDef :
-        GrinVar -> -- should only be Fixed or Grin
+        (name : GrinVar) -> -- should only be Fixed or Grin
         (args : List GrinVar) ->
         GrinExp ->
         GrinDef

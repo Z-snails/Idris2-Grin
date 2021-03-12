@@ -53,9 +53,11 @@ infixl 6 <->
 (<->) : Builder -> Builder -> Builder
 l <-> r = l <+> " " <+> r
 
+||| Put spaces before every builder in a foldable
 spaceSep : Foldable t => t Builder -> Builder
 spaceSep = foldMap (" " <+>)
 
+||| Put newlines before every builder in a foldable
 nlSep : Foldable t => t Builder -> Builder
 nlSep = foldMap ("\n" <+>)
 
@@ -91,21 +93,22 @@ prettyName (Resolved i) = showB i
 ||| Pretty print a grin variable.
 prettyGrinVar : GrinVar -> Builder
 prettyGrinVar (Var x) = "v" <+> showB x
-prettyGrinVar (Fixed n) = "n" <+> prettyName n
+prettyGrinVar (Fixed n) = "\"n" <+> prettyName n <+> "\""
 prettyGrinVar (Grin n) = fromString n
 
 ||| Pretty print a tag type.
-||| Takes builder to make into a tag.
-prettyTagType : TagType -> Builder -> Builder
-prettyTagType Con n = "\"C" <+> n <+> "\""
-prettyTagType Thunk n = "\"F" <+> n <+> "\""
-prettyTagType InfThunk n = "\"FInf" <+> n <+> "\""
-prettyTagType (Missing missing) n = "\"P" <+> n <+> "_" <+> showB missing <+> "\""
+prettyTagType : TagType -> Builder
+prettyTagType Con = "C"
+prettyTagType Thunk = "F"
+prettyTagType InfThunk = "FInf"
+prettyTagType (Missing missing) = "P" <+> showB missing
 
 ||| Pretty print a tag.
 prettyTag : Tag -> Builder
-prettyTag (MkTag{tagType, tagName}) =
-    prettyTagType tagType $ prettyName tagName
+prettyTag (MkTag{tagType, tagName = (Left tagName)}) =
+    prettyTagType tagType <+> "\"" <+> prettyName tagName <+> "\""
+prettyTag (MkTag{tagType, tagName = (Right tagName)}) =
+    prettyTagType tagType <+> fromString tagName
 
 ||| Pretty print a GRIN literal.
 prettyGrinLit : GrinLit -> Builder
@@ -146,7 +149,7 @@ prettyVal (VSimpleVal val) = prettySimpleVal val
 
 ||| Pretty print a case pattern.
 prettyCPat : CasePat -> Builder
-prettyCPat (NodePat tag args) = prettyTag tag <+> spaceSep (prettyVal <$> args)
+prettyCPat (NodePat tag args) = bracket $ prettyTag tag <+> spaceSep (prettyVal <$> args)
 prettyCPat (TagPat tag) = prettyTag tag
 prettyCPat (LitPat lit) = prettyGrinLit lit
 prettyCPat Default = "#default"
@@ -169,22 +172,22 @@ mutual
         prettySimpleExp ind exp <+> "\n"
         <+> prettyGrinExp ind rest
     prettyGrinExp ind (Bind val exp rest) =
-        prettyVal val <-> "<-" <-> prettySimpleExp ind exp <+> "\n"
-        <+> prettyGrinExp ind rest
+        bracket (prettyVal val) <-> "<-" <-> prettySimpleExp ind exp <+> "\n"
+        <+> indent ind <+> prettyGrinExp ind rest
     prettyGrinExp ind (Case val alts) =
         "case" <-> prettyVal val <-> "of"
-        <+> nlSep (prettyGrinAlt ind <$> alts)
+        <+> nlSep (prettyGrinAlt (ind + indentSize) <$> alts)
     prettyGrinExp ind (Simple exp) = prettySimpleExp ind exp
     
     prettyGrinAlt : (indent : Nat) -> GrinAlt -> Builder
     prettyGrinAlt ind (MkAlt pat exp) =
-        indent ind <+> prettyCPat pat <-> "->" <-> prettyGrinExp ind exp
+        indent ind <+> prettyCPat pat <-> "->\n" <+> indent (ind + indentSize) <+> prettyGrinExp (ind + indentSize) exp
 
 ||| Pretty print a top level definition.
 prettyGrinDef : GrinDef -> Builder
 prettyGrinDef (MkDef n args exp) =
     prettyGrinVar n <+> spaceSep (prettyGrinVar <$> args)
-    <-> "=\n" <+> prettyGrinExp indentSize exp
+    <-> "=\n" <+> indent indentSize <+> prettyGrinExp indentSize exp
 
 ||| Pretty print external information.
 prettyExternal : (indent : Nat) -> External -> Builder
@@ -192,12 +195,18 @@ prettyExternal ind ext =
     indent ind <+> spaceSep (prettyGrinType <$> ext.argTy) <->
     prettyGrinType ext.retTy
 
+||| Include a Builder if a list is non-empty.
+ifCons : List a -> Builder -> Builder
+ifCons [] _ = ""
+ifCons _ b = b
+
 ||| Pretty print an entire program.
+export
 prettyProg : GrinProg -> Builder
 prettyProg (MkProg exts defs) =
     let (primPure, primEff, ffiPure, ffiEff) = splitExterns exts in
-    "\nprimop pure" <+> nlSep (prettyExternal indentSize <$> primPure) <+>
-    "\nprimop effectful" <+> nlSep (prettyExternal indentSize <$> primPure) <+>
-    "\nffi pure" <+> nlSep (prettyExternal indentSize <$> primPure) <+>
-    "\nffi effectful" <+> nlSep (prettyExternal indentSize <$> primPure) <+>
+    ifCons primPure ("\nprimop pure" <+> nlSep (prettyExternal indentSize <$> primPure)) <+>
+    ifCons primPure ("\nprimop effectful" <+> nlSep (prettyExternal indentSize <$> primPure)) <+>
+    ifCons primPure ("\nffi pure" <+> nlSep (prettyExternal indentSize <$> primPure)) <+>
+    ifCons primPure ("\nffi effectful" <+> nlSep (prettyExternal indentSize <$> primPure)) <+>
     "\n" <+> nlSep (prettyGrinDef <$> defs)
