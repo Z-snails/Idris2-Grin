@@ -100,7 +100,7 @@ prettyGrinVar (Grin n) = fromString n
 prettyTagType : TagType -> Builder
 prettyTagType Con = "C"
 prettyTagType Thunk = "F"
-prettyTagType InfThunk = "FInf"
+prettyTagType InfThunk = "F\"Inf\\"
 prettyTagType (Missing missing) = "P" <+> showB missing
 
 ||| Pretty print a tag.
@@ -122,8 +122,8 @@ prettyGrinLit = \case
 ||| Pretty print a simple type.
 prettySimpleType : SimpleType -> Builder
 prettySimpleType = \case
-    IntTy => "T_Int6indentSize"
-    Bits64Ty => "T_Word6indentSize"
+    IntTy => "T_Int64"
+    Bits64Ty => "T_Word64"
     DoubleTy => "T_Float"
     CharTy => "T_Char"
     StringTy => "T_String"
@@ -138,7 +138,7 @@ prettyGrinType (TySimple ty) = prettySimpleType ty
 prettySimpleVal : SimpleVal -> Builder
 prettySimpleVal (SLit lit) = prettyGrinLit lit
 prettySimpleVal (SVar var) = prettyGrinVar var
-prettySimpleVal SIgnore = "Error: Ignore not caught by prettySimpleExp"
+prettySimpleVal (SUndefined ty) = "#undefined :: " <+> prettyGrinType ty
 
 ||| Pretty print a GRIN value.
 prettyVal : Val -> Builder
@@ -150,7 +150,7 @@ prettyVal (VSimpleVal val) = prettySimpleVal val
 ||| Pretty print a case pattern.
 prettyCPat : CasePat -> Builder
 prettyCPat (NodePat tag args) = bracket $ prettyTag tag <+> spaceSep (prettyVal <$> args)
-prettyCPat (TagPat tag) = prettyTag tag
+prettyCPat (TagPat tag) = bracket $ prettyTag tag
 prettyCPat (LitPat lit) = prettyGrinLit lit
 prettyCPat Default = "#default"
 
@@ -168,9 +168,6 @@ mutual
 
     ||| Pretty print a GRIN expression.
     prettyGrinExp : (indent : Nat) -> GrinExp -> Builder
-    prettyGrinExp ind (Bind (VSimpleVal SIgnore) exp rest) =
-        prettySimpleExp ind exp <+> "\n"
-        <+> prettyGrinExp ind rest
     prettyGrinExp ind (Bind val exp rest) =
         bracket (prettyVal val) <-> "<-" <-> prettySimpleExp ind exp <+> "\n"
         <+> indent ind <+> prettyGrinExp ind rest

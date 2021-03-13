@@ -84,8 +84,8 @@ data SimpleVal : Type where
     SLit : GrinLit -> SimpleVal
     ||| Variable.
     SVar : GrinVar -> SimpleVal
-    ||| Signals result of rhs is discarded
-    SIgnore : SimpleVal
+    ||| Undefined value.
+    SUndefined : GrinType -> SimpleVal
 
 ||| A GRIN value.
 public export
@@ -109,8 +109,8 @@ VVar = VSimpleVal . SVar
 
 ||| Signals result of rhs is discarded
 public export
-VIgnore : Val
-VIgnore = VSimpleVal SIgnore
+VUndefined : GrinType -> Val
+VUndefined = VSimpleVal . SUndefined
 
 ||| Pattern in a case statement.
 public export
