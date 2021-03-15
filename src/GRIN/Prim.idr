@@ -9,6 +9,26 @@ import Compiler.ANF
 
 import GRIN.Syntax
 
+export
+replicateCore : Nat -> Core a -> Core (List a)
+replicateCore Z act = pure []
+replicateCore (S k) act = (::) <$> act <*> replicateCore k act
+
+||| Next variable
+export
+data NextId : Type where
+
+export
+nextId : Ref NextId Int => Core Int
+nextId = do
+    i <- get NextId
+    put NextId (i + 1)
+    pure i
+
+export
+nextVar : Ref NextId Int => Core GrinVar
+nextVar = Var <$> nextId
+
 getPrimTypeName : Constant -> String
 getPrimTypeName = \case
     IntType => "Int"
@@ -170,32 +190,35 @@ unwrapPrim (MkAConstAlt c _) v = case c of
     WorldType => VVar v
 
 mkPrimFn :
+    Ref NextId Int =>
     (fn : String) ->
     (binds : List String) ->
     (prim : String) ->
     (ret : String) ->
-    GrinDef
-mkPrimFn fn [] prim ret =
-    MkDef
+    Core GrinDef
+mkPrimFn fn [] prim ret = do
+    r <- nextVar
+    pure $ MkDef
         (Grin fn)
         []
-        $ Bind (VVar $ Var 0) (App (Grin prim) [])
-        $ Simple $ Pure (VTagNode (MkTag Con $ Right ret) [SVar $ Var 0])
-mkPrimFn fn binds prim ret =
-    let ca = cast $ length binds
-        args = Var <$> [0 .. ca - 1]
-        bounds = Var <$> [ca .. ca * 2 - 1]
-        bindings =
+        $ Bind (VVar r) (App (Grin prim) [])
+        $ Simple $ Pure (VTagNode (MkTag Con $ Right ret) [SVar r])
+mkPrimFn fn binds prim ret = do
+    let ca = length binds
+    args <- replicateCore ca nextVar
+    bounds <- replicateCore ca nextVar
+    let bindings =
             zipWith
                 (\bi, bo => VTagNode (MkTag Con $ Right bi) [SVar bo])
                 binds
                 bounds
-    in MkDef
+    r <- nextVar
+    pure $ MkDef
         (Grin fn)
         args
         $ bindArgs args bindings
-        $ Bind (VVar $ Var $ ca * 2) (App (Grin prim) $ bounds)
-        $ Simple $ Pure $ VTagNode (MkTag Con $ Right ret) [SVar $ Var $ ca * 2] 
+        $ Bind (VVar r) (App (Grin prim) $ bounds)
+        $ Simple $ Pure $ VTagNode (MkTag Con $ Right ret) [SVar r] 
   where
     bindArgs : List GrinVar -> List Val -> GrinExp -> GrinExp
     bindArgs [] _ k = k
@@ -205,44 +228,59 @@ mkPrimFn fn binds prim ret =
         $ bindArgs rArgs rBinds k
 
 unaryFromTo :
+    Ref NextId Int =>
     ( String
     , String
     , String
     , String
     ) ->
-    GrinDef
-unaryFromTo (fn, from, prim, to) = mkPrimFn fn [from] prim to
+    Core GrinDef
+unaryFromTo (fn, from, prim, to) = mkPrimFn ("prim__" ++ fn) [from] prim to
 
 unary :
+    Ref NextId Int =>
     ( String
     , String
     , String
     ) ->
-    GrinDef
-unary (fn, bind, prim) = mkPrimFn fn [bind] prim bind
+    Core GrinDef
+unary (fn, bind, prim) = mkPrimFn ("prim__" ++ fn) [bind] prim bind
 
 binary :
+    Ref NextId Int =>
     ( String
     , String
     , String
     ) ->
-    GrinDef
-binary (fn, bind, prim) = mkPrimFn fn [bind, bind] prim bind
+    Core GrinDef
+binary (fn, bind, prim) = mkPrimFn ("prim__" ++ fn) [bind, bind] prim bind
 
 ||| Primitive functions.
 -- Todo: complete
 export
-prims : List GrinDef
-prims =
-    (unary <$>
-        [ ("prim__strTail", "String", "_prim_string_tail")
+prims : Ref NextId Int => Core (List GrinDef)
+prims = do
+    un <- traverse unary
+        [ ("strTail", "String", "_prim_string_tail")
         ]
-    ) ++
-    (unaryFromTo <$>
-        [ ("prim__strLength", "String", "_prim_string_len", "Int")
+    unFT <- traverse unaryFromTo
+        [ ("strLength", "String", "_prim_string_len", "Int")
         ]
-    ) ++
-    (binary <$>
-        [ ("prim__add_Int", "Int", "_prim_int_add")
+    bin <- traverse binary
+        [ ("add_Int", "Int", "_prim_int_add")
+        , ("add_Integer", "Integer", "_prim_int_add") -- for now just an Int to get it working
+        , ("sub_Integer", "Integer", "_prim_int_sub")
+        , ("mul_Integer", "Integer", "_prim_int_mul")
+        , ("eq_Integer", "Integer", "_prim_int_eq")
+        , ("lt_Integer", "Integer", "_prim_int_lt")
+        , ("lte_Integer", "Integer", "_prim_int_le")
+        , ("gt_Integer", "Integer", "_prim_int_gt")
+        , ("gte_Integer", "Integer", "_prim_int_ge")
         ]
-    )
+    believe_me <- do
+        fromTy_ <- nextVar
+        toTy_ <- nextVar
+        arg <- nextVar
+        pure $ MkDef (Grin "prim__believe_me") [fromTy_, toTy_, arg]
+             $ Simple $ Fetch arg
+    pure $ un ++ unFT ++ bin ++ [believe_me]
