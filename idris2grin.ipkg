@@ -6,7 +6,10 @@ sourcedir = "src"
 main = Main
 executable = idris2grin
 
-modules = Main
+modules = Core.Instances
+        , Compiler.Pipeline
+        , Main
         , GRIN.Syntax
         , GRIN.Pretty
         , GRIN.ANF
+        , GRIN.GRIN
