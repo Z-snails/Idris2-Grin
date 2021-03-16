@@ -5,6 +5,8 @@ import Data.List
 
 import Core.Name
 
+import Compiler.Pipeline
+
 import GRIN.Syntax
 
 ||| Number of spaces to indent.
@@ -198,7 +200,6 @@ ifCons [] _ = ""
 ifCons _ b = b
 
 ||| Pretty print an entire program.
-export
 prettyProg : GrinProg -> Builder
 prettyProg (MkProg exts defs) =
     let (primPure, primEff, ffiPure, ffiEff) = splitExterns exts in
@@ -207,3 +208,7 @@ prettyProg (MkProg exts defs) =
     ifCons primPure ("\nffi pure" <+> nlSep (prettyExternal indentSize <$> primPure)) <+>
     ifCons primPure ("\nffi effectful" <+> nlSep (prettyExternal indentSize <$> primPure)) <+>
     "\n" <+> nlSep (prettyGrinDef <$> defs)
+
+export
+prettyGrin : TransInfo (\x => x) GrinProg String
+prettyGrin = MkTI $ runBuilder . prettyProg
