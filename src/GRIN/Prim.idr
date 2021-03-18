@@ -103,7 +103,7 @@ getPrimFnName = \case
 
 ||| Make a primitive Tag.
 primTag : String -> Tag
-primTag = MkTag Con . Right
+primTag = MkTag Con . Grin
 
 ||| Make a unary primitive Tag.
 export
@@ -202,14 +202,14 @@ mkPrimFn fn [] prim ret = do
         (Grin fn)
         []
         $ Bind (VVar r) (App (Grin prim) [])
-        $ Simple $ Pure (VTagNode (MkTag Con $ Right ret) [SVar r])
+        $ Simple $ Pure (VTagNode (primTag ret) [SVar r])
 mkPrimFn fn binds prim ret = do
     let ca = length binds
     args <- replicateCore ca nextVar
     bounds <- replicateCore ca nextVar
     let bindings =
             zipWith
-                (\bi, bo => VTagNode (MkTag Con $ Right bi) [SVar bo])
+                (\bi, bo => VTagNode (primTag bi) [SVar bo])
                 binds
                 bounds
     r <- nextVar
@@ -218,7 +218,7 @@ mkPrimFn fn binds prim ret = do
         args
         $ bindArgs args bindings
         $ Bind (VVar r) (App (Grin prim) $ bounds)
-        $ Simple $ Pure $ VTagNode (MkTag Con $ Right ret) [SVar r] 
+        $ Simple $ Pure $ VTagNode (primTag ret) [SVar r] 
   where
     bindArgs : List GrinVar -> List Val -> GrinExp -> GrinExp
     bindArgs [] _ k = k

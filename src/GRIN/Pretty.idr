@@ -107,10 +107,12 @@ prettyTagType (Missing missing) = "P" <+> showB missing
 
 ||| Pretty print a tag.
 prettyTag : Tag -> Builder
-prettyTag (MkTag{tagType, tagName = (Left tagName)}) =
+prettyTag (MkTag{tagType, tagName = (Fixed tagName)}) =
     prettyTagType tagType <+> "\"" <+> prettyName tagName <+> "\""
-prettyTag (MkTag{tagType, tagName = (Right tagName)}) =
+prettyTag (MkTag{tagType, tagName = (Grin tagName)}) =
     prettyTagType tagType <+> fromString tagName
+prettyTag (MkTag{tagType, tagName = (Var _)}) =
+    "Internal Error: Unexpected `Var` in `Tag`"
 
 ||| Pretty print a GRIN literal.
 prettyGrinLit : GrinLit -> Builder
@@ -145,9 +147,10 @@ prettySimpleVal (SUndefined ty) = "#undefined :: " <+> prettyGrinType ty
 ||| Pretty print a GRIN value.
 prettyVal : Val -> Builder
 prettyVal (VTagNode tag args) =
-    prettyTag tag <+> spaceSep (prettySimpleVal <$> args)
-prettyVal (VTag tag) = prettyTag tag
+    bracket $ prettyTag tag <+> spaceSep (prettySimpleVal <$> args)
+prettyVal (VTag tag) = bracket $ prettyTag tag
 prettyVal (VSimpleVal val) = prettySimpleVal val
+prettyVal VUnit = "()"
 
 ||| Pretty print a case pattern.
 prettyCPat : CasePat -> Builder
@@ -162,16 +165,19 @@ mutual
     prettySimpleExp ind (Do exp) = "do\n" <+> prettyGrinExp (ind + indentSize) exp
     prettySimpleExp ind (App f args) =
         prettyGrinVar f <+> spaceSep (prettyGrinVar <$> args)
-    prettySimpleExp ind (Pure val) = "pure" <-> bracket (prettyVal val)
-    prettySimpleExp ind (Store val) = "store" <-> bracket (prettyVal val)
+    prettySimpleExp ind (Pure val) = "pure" <-> prettyVal val
+    prettySimpleExp ind (Store val) = "store" <-> prettyVal val
     prettySimpleExp ind (Fetch var) = "fetch" <-> prettyGrinVar var
     prettySimpleExp ind (Update var val) =
-        "update" <-> prettyGrinVar var <-> bracket (prettyVal val)
+        "update" <-> prettyGrinVar var <-> prettyVal val
 
     ||| Pretty print a GRIN expression.
     prettyGrinExp : (indent : Nat) -> GrinExp -> Builder
+    prettyGrinExp ind (Bind VUnit exp rest) =
+        prettySimpleExp ind exp <+> "\n"
+        <+> indent ind <+> prettyGrinExp ind rest
     prettyGrinExp ind (Bind val exp rest) =
-        bracket (prettyVal val) <-> "<-" <-> prettySimpleExp ind exp <+> "\n"
+        prettyVal val <-> "<-" <-> prettySimpleExp ind exp <+> "\n"
         <+> indent ind <+> prettyGrinExp ind rest
     prettyGrinExp ind (Case val alts) =
         "case" <-> prettyVal val <-> "of"

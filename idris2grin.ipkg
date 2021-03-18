@@ -13,3 +13,4 @@ modules = Core.Instances
         , GRIN.Pretty
         , GRIN.ANF
         , GRIN.GRIN
+        , GRIN.Optimisations.SimpleUnusedParameterElimination

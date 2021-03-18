@@ -13,8 +13,10 @@ import Core.Instances
 import Compiler.Common
 import Compiler.Pipeline
 
+import GRIN.Syntax
 import GRIN.ANF
 import GRIN.Pretty
+import GRIN.Optimisations.SimpleUnusedParameterElimination
 
 compileExpr :
     Ref Ctxt Defs ->
@@ -30,6 +32,7 @@ compileExpr d tmpDir outDir term outFile = do
     cdata <- getCompileData True ANF term
     prettyProg <- runPipeline
         [ anfToGrin
+        , liftTI Core.pure simpleUnusedParameterElimination
         , liftTI Core.pure prettyGrin
         ] cdata.anf
 

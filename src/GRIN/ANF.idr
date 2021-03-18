@@ -78,12 +78,12 @@ nextVar' ip = do
     pure var
 
 ||| Returns constructor for lazy version of a function.
-getLazyTag : LazyReason -> Either Name String -> Tag
+getLazyTag : LazyReason -> GrinVar -> Tag
 getLazyTag LInf n = MkTag InfThunk n
 getLazyTag _ n = MkTag Thunk n
 
 ||| Returns constructor for partial function application.
-getPartialTag : (missing : Nat) -> Either Name String -> Tag
+getPartialTag : (missing : Nat) -> GrinVar -> Tag
 getPartialTag = MkTag . Missing
 
 ||| Return app function with correct laziness.
@@ -93,7 +93,7 @@ getAppVar (Just LInf) = Grin "appInf"
 getAppVar (Just _) = Grin "appL"
 
 erasedTag : Tag
-erasedTag = MkTag Con $ Right "Erased"
+erasedTag = MkTag Con $ Grin "Erased"
 
 eval : {auto 1 expTy : Either (exp = SimpleExp) (exp = GrinExp)} -> GrinVar -> exp
 eval {expTy = Left prf} var = rewrite prf in App (Grin "eval") [var]
@@ -172,7 +172,7 @@ compilePrimFn np (Just lazy) fn args k = -- lazy
     fetches (forgetLen args) \args' => do
         ret <- nextVar
         setVarPointer ret np
-        pure $ Bind (VVar ret) (getPointer np $ VTagNode (getLazyTag lazy $ Right $ getPrimFnName fn) $ SVar <$> args')
+        pure $ Bind (VVar ret) (getPointer np $ VTagNode (getLazyTag lazy $ Grin $ getPrimFnName fn) $ SVar <$> args')
              !(k ret)
 
 compileExtPrim : 
@@ -221,12 +221,12 @@ mutual
     compileANF np (AAppName _ (Just lazy) n args) k =
         fetches args \args' => do
             ret <- nextVar' np
-            pure $ Bind (VVar ret) (getPointer np $ VTagNode (getLazyTag lazy $ Left n) (SVar <$> args'))
+            pure $ Bind (VVar ret) (getPointer np $ VTagNode (getLazyTag lazy $ Fixed n) (SVar <$> args'))
                  !(k ret)
     compileANF np (AUnderApp _ n missing args) k =
         fetches args \args' => do
             ret <- nextVar' np
-            pure $ Bind (VVar ret) (getPointer np $ VTagNode (getPartialTag missing $ Left n) (SVar <$> args'))
+            pure $ Bind (VVar ret) (getPointer np $ VTagNode (getPartialTag missing $ Fixed n) (SVar <$> args'))
                  !(k ret)
     compileANF np (AApp _ lazy af aarg) k = do
         let ALocal af' = af
@@ -249,12 +249,12 @@ mutual
             compileANF np rest k
     compileANF np (ACon _ n _ []) k = do -- Constructors are always fully applied
         ret <- nextVar' np
-        pure $ Bind (VVar ret) (getPointer np $ VTag $ MkTag Con $ Left n)
+        pure $ Bind (VVar ret) (getPointer np $ VTag $ MkTag Con $ Fixed n)
              !(k ret)
     compileANF np (ACon _ n _ args) k =
         fetches args \args' => do
             ret <- nextVar' np
-            pure $ Bind (VVar ret) (getPointer np $ VTagNode (MkTag Con $ Left n) $ SVar <$> args')
+            pure $ Bind (VVar ret) (getPointer np $ VTagNode (MkTag Con $ Fixed n) $ SVar <$> args')
                  !(k ret)
     compileANF np (AOp _ lazy op args) k = compilePrimFn np lazy op args k
         -- basically a normal function that calls the correct grin primitive
@@ -319,10 +319,10 @@ mutual
         (GrinVar -> Core GrinExp) -> -- rest of the grin expression
         Core GrinAlt
     compileAConAlt np (MkAConAlt n _ [] exp) k =
-        pure $ MkAlt (TagPat $ MkTag Con $ Left n) !(compileANF np exp k)
+        pure $ MkAlt (TagPat $ MkTag Con $ Fixed n) !(compileANF np exp k)
     compileAConAlt np (MkAConAlt n _ args exp) k = do
         args' <- traverse getAnfVar args
-        pure $ MkAlt (NodePat (MkTag Con $ Left n) $ VVar <$> args')
+        pure $ MkAlt (NodePat (MkTag Con $ Fixed n) $ VVar <$> args')
              !(compileANF np exp k)
 
     compileAConstAlt :
@@ -358,16 +358,14 @@ addApps (s, l, inf) = update AppDefs
 addFunToApp :
     Ref AppDefs AppInfo =>
     Ref NextId Int =>
-    Name -> List Int -> Core ()
-addFunToApp fn [] = pure () -- can't apply a function with no arguments
-addFunToApp fn args = traverse_ addArity [1 .. arity] -- how many are missing
+    Name -> Nat -> Core ()
+addFunToApp fn 0 = pure () -- can't apply a function with no arguments
+addFunToApp fn arity = traverse_ addArity [1 .. arity] -- how many are missing
   where
-    arity : Nat
-    arity = length args
     addArity : Nat -> Core ()
     addArity missing =
-        let tag = getPartialTag missing $ Left fn
-            tag1 = getPartialTag (missing `minus` 1) $ Left fn
+        let tag = getPartialTag missing $ Fixed fn
+            tag1 = getPartialTag (missing `minus` 1) $ Fixed fn
             altS = \arg => do
                 args <- replicateCore (arity `minus` missing) nextVar
                 pure $ MkAlt
@@ -375,12 +373,12 @@ addFunToApp fn args = traverse_ addArity [1 .. arity] -- how many are missing
                     $ case missing of
                         1 => Simple $ App (Fixed fn) ((if arity <= missing then [] else args) ++ [arg])
                         _ => Simple $ Pure $ VTagNode tag1 (SVar <$> args ++ [arg])
-            altL = \lazy, arg => the (Core _) $ do
+            altL = \lazy, arg => do
                 args <- replicateCore (arity `minus` missing) nextVar
                 pure $ MkAlt
                     (if missing == arity then TagPat tag else NodePat tag $ VVar <$> args)
                     $ case missing of
-                        1 => Simple $ Pure $ VTagNode (getLazyTag lazy $ Left fn)
+                        1 => Simple $ Pure $ VTagNode (getLazyTag lazy $ Fixed fn)
                                 (SVar <$> (if arity <= missing then [] else args) ++ [arg])
                         _ => Simple $ Pure $ VTagNode tag1 (SVar <$> args ++ [arg])
         in addApps (altS, altL LLazy, altL LInf)
@@ -388,8 +386,24 @@ addFunToApp fn args = traverse_ addArity [1 .. arity] -- how many are missing
 ||| Add a function to the various eval functions.
 addFunToEval :
     Ref Eval (List (GrinVar -> Core GrinAlt)) =>
-    Name -> List Int -> Core ()
-addFunToEval fn _ = pure ()
+    Ref NextId Int =>
+    Name -> Nat -> Core ()
+addFunToEval fn arity =
+    let evalExp : Bool -> GrinVar -> List GrinVar -> Core GrinExp
+        evalExp = \linf, arg, args =>
+            case linf of
+                False => do
+                    res <- nextVar
+                    pure $ Bind (VVar res) (App (Fixed fn) args)
+                            $ Bind VUnit (Update arg (VVar res))
+                            $ Simple $ Pure $ VVar res
+                True => pure $ Simple $ App (Fixed fn) args
+        evalFn : Bool -> GrinVar -> Core GrinAlt
+        evalFn = \linf, arg => do
+            args <- replicateCore arity nextVar
+            pure $ MkAlt (NodePat (getLazyTag (if linf then LInf else LLazy) (Fixed fn)) (VVar <$> args))
+                 !(evalExp linf arg args)
+    in update Eval ((evalFn False ::) . (evalFn True ::))
 
 ||| compile an ANF definition.
 compileANFDef :
@@ -411,11 +425,12 @@ compileANFDef (name, MkAFun args exp) = do
             args'
             !(compileANF False exp \ret =>
             (pure $ Simple $ Pure $ VVar ret)))
-    addFunToApp name args
-    addFunToEval name args
+    let arity = length args
+    addFunToApp name arity
+    addFunToEval name arity
     update GrinDefs (def ::)
 compileANFDef (name, MkACon _ arity _) = do -- for now ignore newtype but maybe later add if grin supports it?
-    let tag = MkTag Con $ Left name
+    let tag = MkTag Con $ Fixed name
         evalAlt : GrinVar -> Core GrinAlt
         evalAlt = \argv => case arity of
             Z => pure $ MkAlt (TagPat tag) (Simple $ Pure $ VVar $ argv)

@@ -49,7 +49,7 @@ record Tag where
     ||| Type of tag.
     tagType : TagType
     ||| name
-    tagName : Either Name String
+    tagName : GrinVar
 
 ||| Literal in GRIN.
 ||| Note there is no Bool literal because Idris removes it
@@ -96,6 +96,8 @@ data Val : Type where
     VTag : Tag -> Val
     ||| A simple value.
     VSimpleVal : SimpleVal -> Val
+    ||| Unit.
+    VUnit : Val
 
 ||| Grin literal.
 public export
