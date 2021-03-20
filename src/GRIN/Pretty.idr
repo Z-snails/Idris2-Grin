@@ -85,12 +85,12 @@ prettyName (NS ns n) = showB ns <+> "." <+> prettyName n
 prettyName (UN n) = fromString n
 prettyName (MN n i) = fromString n <+> "." <+> showB i
 prettyName (PV n i) = "pv_" <+> prettyName n <+> "." <+> showB i
-prettyName (DN n _) = "dn_" <+> fromString n
+prettyName (DN _ n) = prettyName n
 prettyName (RF n) = "rf_" <+> fromString n
 prettyName (Nested (x, y) n) = "n" <+> showB x <+> showB y <+> "_" <+> prettyName n
 prettyName (CaseBlock n i) = "cb" <+> showB i <+> "_" <+> fromString n
 prettyName (WithBlock n i) = "wb" <+> showB i <+> "_" <+> fromString n
-prettyName (Resolved i) = showB i
+prettyName (Resolved i) = "r" <+> showB i -- 'r' not 'v' to not conflict with GrinVar
 
 ||| Pretty print a grin variable.
 prettyGrinVar : GrinVar -> Builder
@@ -197,7 +197,7 @@ prettyGrinDef (MkDef n args exp) =
 ||| Pretty print external information.
 prettyExternal : (indent : Nat) -> External -> Builder
 prettyExternal ind ext =
-    indent ind <+> spaceSep (prettyGrinType <$> ext.argTy) <->
+    indent ind <+> foldMap (<+> " -> ") (prettyGrinType <$> ext.argTy) <+>
     prettyGrinType ext.retTy
 
 ||| Include a Builder if a list is non-empty.

@@ -13,6 +13,7 @@ import Libraries.Utils.Path
 
 import Core.Core
 import Core.Context
+import Core.CompileExpr
 import Core.TT
 
 import Compiler.ANF
@@ -405,12 +406,42 @@ addFunToEval fn arity =
                  !(evalExp linf arg args)
     in update Eval ((evalFn False ::) . (evalFn True ::))
 
+data PFInfo : Type where -- information about primitive/ffi functions
+record PrimFnInfo where
+    constructor MkPF
+    externs : List External
+    wrapper : List GrinDef
+
+Semigroup PrimFnInfo where
+    l <+> r = MkPF (l.externs ++ r.externs) (l.wrapper ++ r.wrapper)
+
+compileCFFI : Ref PFInfo PrimFnInfo =>
+    Name -> List CFType ->
+    CFType ->
+    (cFunction : String) ->
+    (cLibrary : String) ->
+    Core ()
+compileCFFI fn args ret cfn clib = pure ()
+
+compileFFI : Ref PFInfo PrimFnInfo =>
+    Name ->
+    (ccs : List String) ->
+    List CFType ->
+    CFType ->
+    Core ()
+compileFFI fn [] args ret = throw $ NoForeignCC emptyFC -- get actual FC
+compileFFI fn (cc :: ccs) args ret = case parseCC cc of
+    Just ("C", [cfn, clib]) => compileCFFI fn args ret cfn clib
+    Just ("C", [cfn, clib, chdr]) => compileCFFI fn args ret cfn clib
+    _ => compileFFI fn ccs args ret
+
 ||| compile an ANF definition.
 compileANFDef :
     Ref NextId Int =>
     Ref GrinDefs (List GrinDef) =>
     Ref Eval (List (GrinVar -> Core GrinAlt)) =>
     Ref AppDefs AppInfo =>
+    Ref PFInfo PrimFnInfo =>
     (Name, ANFDef) -> Core ()
 compileANFDef (name, MkAFun args exp) = do
     varMapRef <- newRef VarMap empty
@@ -440,7 +471,8 @@ compileANFDef (name, MkACon _ arity _) = do -- for now ignore newtype but maybe 
                 -- if a constructor just return it no need to write it out again
     update Eval (evalAlt ::)
     pure ()
-compileANFDef (name, MkAForeign ccs argTy reTy) = pure () -- Todo: add ffi
+compileANFDef (name, MkAForeign ccs argTy retTy) = do -- Todo: add ffi
+    compileFFI name ccs argTy retTy
 compileANFDef (name, MkAError exp) = compileANFDef (name, MkAFun [] exp)
 
 main : GrinDef
@@ -455,6 +487,7 @@ compileANFProg defs = do
     evalRef <- newRef Eval []
     appInfo <- newRef AppDefs $ MkAI [] [] []
     nextId <- newRef NextId 0
+    primFnInfo <- newRef PFInfo $ MkPF [] []
     defs <- traverse compileANFDef defs
 
     evalAlts <- get Eval
@@ -498,11 +531,13 @@ compileANFProg defs = do
                     !(traverse ($ arg) appInfo.appLInf)
         ]
 
+    pfi <- get PFInfo
+
     defs <- pure $
-        ([main, evalFn] ++ appDefs)
+        ([main, evalFn] ++ pfi.wrapper ++ appDefs)
         ++ !prims ++ !(get GrinDefs)
 
-    let prog = MkProg [] defs
+    let prog = MkProg pfi.externs defs
     pure prog
 
 export

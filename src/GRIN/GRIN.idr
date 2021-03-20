@@ -11,6 +11,7 @@ import Core.Context
 import Core.Instances
 
 import Compiler.Common
+import Compiler.Inline
 import Compiler.Pipeline
 
 import GRIN.Syntax

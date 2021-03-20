@@ -265,6 +265,7 @@ prims = do
         ]
     unFT <- traverse unaryFromTo
         [ ("strLength", "String", "_prim_string_len", "Int")
+        , ("strHead", "String", "_prim_string_head", "Int") -- Todo: change to Char when updated in grin
         ]
     bin <- traverse binary
         [ ("add_Int", "Int", "_prim_int_add")
