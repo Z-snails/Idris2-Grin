@@ -3,17 +3,20 @@ target = idris2grin
 builddir = ./build/exec
 idris2grin = $(builddir)/$(target)
 
-.PHONY: build install run clean
+.PHONY : self-host install run clean
 
-build: ./src/**/*.idr
+$(idris2grin) : ./src/**/*.idr idris2grin.ipkg
 	$(idris2) --build idris2grin.ipkg
 
-install: build
+self-host : ./src/**/*.idr idris2grin.ipkg $(idris2grin)
+	$(idris2grin) --build idris2grin.ipkg
+
+install : $(idris2grin)
 	$(idris2) --install idris2grin.ipkg
 
-run: build
+run : $(idris2grin)
 	$(idris2grin)
 
-clean:
+clean :
 	rm -rf ./build/
 	rm -rf ./.output
