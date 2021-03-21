@@ -49,7 +49,7 @@ executeExpr :
 executeExpr d tmpDir term = do
     Just grinFile <- compileExpr d tmpDir tmpDir term "execute"
         | Nothing => throw $ InternalError "compileExpr returned Nothing"
-    coreLift_ $ system "grin -q execute.grin"
+    coreLift_ $ system "grin -q execute.grin --eval"
 
 export
 grin : Codegen

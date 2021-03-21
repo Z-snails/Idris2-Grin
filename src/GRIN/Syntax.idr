@@ -10,8 +10,9 @@ data GrinVar : Type where
     ||| Known variable (e.g. functions or constructors).
     Fixed : Name -> GrinVar
     ||| Grin function.
-    Grin : String -> GrinVar -- Note: never start a `Grin` var with v
-                             -- as this can clash with `Fixed` `GrinVar`s
+    Grin : String -> GrinVar
+    -- Note: never start a `Grin` var with v
+    -- as this can clash with `Fixed` `GrinVar`s
 
 export
 Eq GrinVar where

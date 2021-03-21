@@ -160,7 +160,7 @@ compilePrimFn :
     (GrinVar -> Core GrinExp) -> -- rest of the grin expression
     Core GrinExp
 compilePrimFn np Nothing fn args k = do -- strict
-    -- Todo: add primitive functions to output when they're used
+    -- TODO: add primitive functions to output when they're used
     -- for now just add them all
     res <- nextVar
     ret <- nextVar
@@ -187,7 +187,7 @@ compileExtPrim :
     (GrinVar -> Core GrinExp) -> -- rest of the grin expression
     Core GrinExp
 compileExtPrim np ret _ f args = assert_total $ idris_crash "compileExtPrim is not yet implemented"
--- Todo: Get external function expected type
+-- TODO: Get external function expected type
 -- if primtive then unwrap else just pass it
 
 mutual
@@ -404,7 +404,21 @@ addFunToEval fn arity =
             args <- replicateCore arity nextVar
             pure $ MkAlt (NodePat (getLazyTag (if linf then LInf else LLazy) (Fixed fn)) (VVar <$> args))
                  !(evalExp linf arg args)
-    in update Eval ((evalFn False ::) . (evalFn True ::))
+        missingExp : (missing : Nat) -> GrinVar -> List GrinVar -> Core GrinExp
+        missingExp = \missing, arg, args =>
+            pure $ Simple $ Pure (VTagNode (getPartialTag missing $ Fixed fn) $ SVar <$> args)
+        missingFn : (missing : Nat) -> GrinVar -> Core GrinAlt
+        missingFn = \missing, arg => do
+            args <- replicateCore missing nextVar
+            pure $ MkAlt (NodePat (getPartialTag missing $ Fixed fn) $ VVar <$> args)
+                 !(missingExp missing arg args)
+        mkMissingFns : List (GrinVar -> Core GrinAlt)
+        mkMissingFns = map (\missing, arg => missingFn missing arg) [1 .. arity]
+        missingFns : List (GrinVar -> Core GrinAlt)
+        missingFns = case arity of
+            Z => []
+            _ => mkMissingFns
+    in update Eval ((evalFn False ::) . (evalFn True ::) . (missingFns ++))
 
 data PFInfo : Type where -- information about primitive/ffi functions
 record PrimFnInfo where
@@ -422,6 +436,8 @@ compileCFFI : Ref PFInfo PrimFnInfo =>
     (cLibrary : String) ->
     Core ()
 compileCFFI fn args ret cfn clib = pure ()
+-- TODO: make wrapper function
+-- TODO: add externals
 
 compileFFI : Ref PFInfo PrimFnInfo =>
     Name ->
@@ -460,7 +476,7 @@ compileANFDef (name, MkAFun args exp) = do
     addFunToApp name arity
     addFunToEval name arity
     update GrinDefs (def ::)
-compileANFDef (name, MkACon _ arity _) = do -- for now ignore newtype but maybe later add if grin supports it?
+compileANFDef (name, MkACon _ arity _) = do
     let tag = MkTag Con $ Fixed name
         evalAlt : GrinVar -> Core GrinAlt
         evalAlt = \argv => case arity of
@@ -470,8 +486,7 @@ compileANFDef (name, MkACon _ arity _) = do -- for now ignore newtype but maybe 
                 pure $ MkAlt (NodePat tag $ VVar <$> args) $ Simple $ Pure $ VVar argv
                 -- if a constructor just return it no need to write it out again
     update Eval (evalAlt ::)
-    pure ()
-compileANFDef (name, MkAForeign ccs argTy retTy) = do -- Todo: add ffi
+compileANFDef (name, MkAForeign ccs argTy retTy) = do -- TODO: add ffi
     compileFFI name ccs argTy retTy
 compileANFDef (name, MkAError exp) = compileANFDef (name, MkAFun [] exp)
 
@@ -498,7 +513,7 @@ compileANFProg defs = do
             (Grin "eval")
             [argp]
             $ Bind (VVar $ argv) (Fetch $ argp)
-            $ Case (VVar $ argv) !(traverse ($ argv) evalAlts)
+            $ Case (VVar $ argv) !(traverse ($ argp) evalAlts)
 
     appInfo <- get AppDefs
     appDefs <- sequence -- safe to assume appInfo._ is non-empty as there is always unsafePerformIO

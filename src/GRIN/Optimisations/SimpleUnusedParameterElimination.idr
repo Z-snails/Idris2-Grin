@@ -87,7 +87,9 @@ removeUnusedVal : UsedVarMap -> Val -> Val
 removeUnusedVal nm = \case
     val@(VTagNode tag args) => case getName tag of
         Nothing => val
-        Just n => VTagNode tag $ removeUnusedArgs nm n args
+        Just n => case removeUnusedArgs nm n args of
+                [] => VTag tag
+                args' => VTagNode tag args
     val => val
 
 mutual
