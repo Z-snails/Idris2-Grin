@@ -75,22 +75,27 @@ getName (MkTag ty n) = case ty of
     Missing _ => Just n
     _ => Nothing
 
-varUsed : UsedVarMap -> GrinVar -> Nat -> Bool
-varUsed nm n idx = case lookup n nm of
-    Nothing => True
-    Just used => contains idx used
-
 removeUnusedArgs : UsedVarMap -> GrinVar -> List a -> List a
-removeUnusedArgs nm n xs = [x | (idx, x) <- number xs, varUsed nm n idx]
+removeUnusedArgs nm n xs =
+    let usedVars = lookup n nm
+        idxUsed : Nat -> Bool
+        idxUsed = \idx => case usedVars of
+            Nothing => True
+            Just used => contains idx used
+    in [x | (idx, x) <- number xs, idxUsed idx]
 
 removeUnusedVal : UsedVarMap -> Val -> Val
 removeUnusedVal nm = \case
     val@(VTagNode tag args) => case getName tag of
         Nothing => val
-        Just n => case removeUnusedArgs nm n args of
-                [] => VTag tag
-                args' => VTagNode tag args
+        Just n => fixValNode $ VTagNode tag $ removeUnusedArgs nm n args
     val => val
+
+removeUnusedCPat : UsedVarMap -> CasePat -> CasePat
+removeUnusedCPat nm pat@(NodePat tag args) = case getName tag of
+    Nothing => pat
+    Just n => fixPatNode $ NodePat tag $ removeUnusedArgs nm n args
+removeUnusedCPat _ pat = pat
 
 mutual
     removeUnusedSExp : UsedVarMap -> SimpleExp -> SimpleExp
@@ -109,7 +114,7 @@ mutual
         Simple exp => Simple (removeUnusedSExp nm exp)
     
     removeUnusedAlt : UsedVarMap -> GrinAlt -> GrinAlt
-    removeUnusedAlt nm (MkAlt pat exp) = MkAlt pat (removeUnusedExp nm exp)
+    removeUnusedAlt nm (MkAlt pat exp) = MkAlt (removeUnusedCPat nm pat) (removeUnusedExp nm exp)
 
 removeUnusedDef : UsedVarMap -> GrinDef -> GrinDef
 removeUnusedDef nm (MkDef n args exp) =

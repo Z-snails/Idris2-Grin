@@ -43,6 +43,20 @@ data TagType : Type where
     ||| Partially applied function.
     Missing : (missing : Nat) -> TagType
 
+tagTypeToNat : TagType -> Nat
+tagTypeToNat Con = 0
+tagTypeToNat Thunk = 1
+tagTypeToNat InfThunk = 2
+tagTypeToNat (Missing m) = 3 + m
+
+export
+Eq TagType where
+    (==) = (==) `on` tagTypeToNat
+
+export
+Ord TagType where
+    compare = compare `on` tagTypeToNat
+
 ||| Constructor.
 public export
 record Tag where
@@ -51,6 +65,14 @@ record Tag where
     tagType : TagType
     ||| name
     tagName : GrinVar
+
+export
+Eq Tag where
+    t1 == t2 = t1.tagType == t2.tagType && t1.tagName == t2.tagName
+
+export
+Ord Tag where
+    t1 `compare` t2 = (t1.tagType `compare` t2.tagType) <+> (t1.tagName `compare` t2.tagName)
 
 ||| Literal in GRIN.
 ||| Note there is no Bool literal because Idris removes it
@@ -100,6 +122,11 @@ data Val : Type where
     ||| Unit.
     VUnit : Val
 
+export
+fixValNode : Val -> Val
+fixValNode (VTagNode tag []) = VTag tag
+fixValNode val = val
+
 ||| Grin literal.
 public export
 VLit : GrinLit -> Val 
@@ -118,10 +145,15 @@ VUndefined = VSimpleVal . SUndefined
 ||| Pattern in a case statement.
 public export
 data CasePat : Type where
-    NodePat : Tag -> List Val -> CasePat
+    NodePat : Tag -> List GrinVar -> CasePat
     TagPat : Tag -> CasePat
     LitPat : GrinLit -> CasePat
     Default : CasePat
+
+export
+fixPatNode : CasePat -> CasePat
+fixPatNode (NodePat tag []) = TagPat tag
+fixPatNode pat = pat
 
 mutual
     ||| Simple GRIN expression.

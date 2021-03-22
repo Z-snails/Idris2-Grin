@@ -154,7 +154,7 @@ prettyVal VUnit = "()"
 
 ||| Pretty print a case pattern.
 prettyCPat : CasePat -> Builder
-prettyCPat (NodePat tag args) = bracket $ prettyTag tag <+> spaceSep (prettyVal <$> args)
+prettyCPat (NodePat tag args) = bracket $ prettyTag tag <+> spaceSep (prettyGrinVar <$> args)
 prettyCPat (TagPat tag) = bracket $ prettyTag tag
 prettyCPat (LitPat lit) = prettyGrinLit lit
 prettyCPat Default = "#default"

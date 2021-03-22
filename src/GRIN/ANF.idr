@@ -323,7 +323,7 @@ mutual
         pure $ MkAlt (TagPat $ MkTag Con $ Fixed n) !(compileANF np exp k)
     compileAConAlt np (MkAConAlt n _ args exp) k = do
         args' <- traverse getAnfVar args
-        pure $ MkAlt (NodePat (MkTag Con $ Fixed n) $ VVar <$> args')
+        pure $ MkAlt (NodePat (MkTag Con $ Fixed n) args')
              !(compileANF np exp k)
 
     compileAConstAlt :
@@ -370,17 +370,17 @@ addFunToApp fn arity = traverse_ addArity [1 .. arity] -- how many are missing
             altS = \arg => do
                 args <- replicateCore (arity `minus` missing) nextVar
                 pure $ MkAlt
-                    (if missing == arity then TagPat tag else NodePat tag $ VVar <$> args)
+                    (if missing == arity then TagPat tag else NodePat tag args)
                     $ case missing of
                         1 => Simple $ App (Fixed fn) ((if arity <= missing then [] else args) ++ [arg])
                         _ => Simple $ Pure $ VTagNode tag1 (SVar <$> args ++ [arg])
             altL = \lazy, arg => do
                 args <- replicateCore (arity `minus` missing) nextVar
                 pure $ MkAlt
-                    (if missing == arity then TagPat tag else NodePat tag $ VVar <$> args)
+                    (if missing == arity then TagPat tag else NodePat tag args)
                     $ case missing of
-                        1 => Simple $ Pure $ VTagNode (getLazyTag lazy $ Fixed fn)
-                                (SVar <$> (if arity <= missing then [] else args) ++ [arg])
+                        1 => Simple $ Pure $ fixValNode $ VTagNode (getLazyTag lazy $ Fixed fn)
+                                (SVar <$> args ++ [arg])
                         _ => Simple $ Pure $ VTagNode tag1 (SVar <$> args ++ [arg])
         in addApps (altS, altL LLazy, altL LInf)
 
@@ -390,27 +390,27 @@ addFunToEval :
     Ref NextId Int =>
     Name -> Nat -> Core ()
 addFunToEval fn arity =
-    let evalExp : Bool -> GrinVar -> List GrinVar -> Core GrinExp
+    let evalExp : LazyReason -> GrinVar -> List GrinVar -> Core GrinExp
         evalExp = \linf, arg, args =>
             case linf of
-                False => do
+                LInf => pure $ Simple $ App (Fixed fn) args
+                _ => do
                     res <- nextVar
                     pure $ Bind (VVar res) (App (Fixed fn) args)
                             $ Bind VUnit (Update arg (VVar res))
                             $ Simple $ Pure $ VVar res
-                True => pure $ Simple $ App (Fixed fn) args
-        evalFn : Bool -> GrinVar -> Core GrinAlt
+        evalFn : LazyReason -> GrinVar -> Core GrinAlt
         evalFn = \linf, arg => do
             args <- replicateCore arity nextVar
-            pure $ MkAlt (NodePat (getLazyTag (if linf then LInf else LLazy) (Fixed fn)) (VVar <$> args))
+            pure $ MkAlt (NodePat (getLazyTag linf (Fixed fn)) args)
                  !(evalExp linf arg args)
         missingExp : (missing : Nat) -> GrinVar -> List GrinVar -> Core GrinExp
         missingExp = \missing, arg, args =>
             pure $ Simple $ Pure (VTagNode (getPartialTag missing $ Fixed fn) $ SVar <$> args)
         missingFn : (missing : Nat) -> GrinVar -> Core GrinAlt
         missingFn = \missing, arg => do
-            args <- replicateCore missing nextVar
-            pure $ MkAlt (NodePat (getPartialTag missing $ Fixed fn) $ VVar <$> args)
+            args <- replicateCore (arity `minus` missing) nextVar
+            pure $ MkAlt (NodePat (getPartialTag missing $ Fixed fn) args)
                  !(missingExp missing arg args)
         mkMissingFns : List (GrinVar -> Core GrinAlt)
         mkMissingFns = map (\missing, arg => missingFn missing arg) [1 .. arity]
@@ -418,7 +418,7 @@ addFunToEval fn arity =
         missingFns = case arity of
             Z => []
             _ => mkMissingFns
-    in update Eval ((evalFn False ::) . (evalFn True ::) . (missingFns ++))
+    in update Eval ((evalFn LLazy ::) . (evalFn LInf ::) . (missingFns ++))
 
 data PFInfo : Type where -- information about primitive/ffi functions
 record PrimFnInfo where
@@ -483,7 +483,7 @@ compileANFDef (name, MkACon _ arity _) = do
             Z => pure $ MkAlt (TagPat tag) (Simple $ Pure $ VVar $ argv)
             _ => do
                 args <- replicateCore arity nextVar
-                pure $ MkAlt (NodePat tag $ VVar <$> args) $ Simple $ Pure $ VVar argv
+                pure $ MkAlt (NodePat tag args) $ Simple $ Pure $ VVar argv
                 -- if a constructor just return it no need to write it out again
     update Eval (evalAlt ::)
 compileANFDef (name, MkAForeign ccs argTy retTy) = do -- TODO: add ffi

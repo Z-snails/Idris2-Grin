@@ -8,6 +8,7 @@ import System.File
 import Core.Core
 import Core.TT
 import Core.Context
+import Core.Context.Log
 import Core.Instances
 
 import Compiler.Common
@@ -18,6 +19,7 @@ import GRIN.Syntax
 import GRIN.ANF
 import GRIN.Pretty
 import GRIN.Optimisations.SimpleUnusedParameterElimination
+import GRIN.Optimisations.SimpleUnusedConstructorElimination
 
 compileExpr :
     Ref Ctxt Defs ->
@@ -31,13 +33,13 @@ compileExpr d tmpDir outDir term outFile = do
         grin = "grin" -- for now hardcoded, maybe make configurable later
 
     cdata <- getCompileData True ANF term
-    prettyProg <- runPipeline
+    prettyProg <- logTime "Run Pipeline" $ runPipeline
         [ anfToGrin
         , liftTI Core.pure simpleUnusedParameterElimination
         , liftTI Core.pure prettyGrin
         ] cdata.anf
 
-    Right () <- coreLift $ writeFile outGrinFile prettyProg
+    Right () <- logTime "Save Grin" $ coreLift $ writeFile outGrinFile prettyProg
         | Left err => throw $ FileErr outGrinFile err
 
     pure $ Just outGrinFile
