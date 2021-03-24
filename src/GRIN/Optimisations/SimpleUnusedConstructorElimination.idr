@@ -35,7 +35,7 @@ mutual
         collectUsedSExp exp
     
     collectUsedAlt : GrinAlt -> SortedSet Tag
-    collectUsedAlt (MkAlt _ exp) = collectUsedExp exp
+    collectUsedAlt (MkAlt pat exp) = maybe id delete (getCaseTag pat) (collectUsedExp exp)
 
 collectUsedDef : GrinDef -> SortedSet Tag
 collectUsedDef (MkDef _ _ exp) = collectUsedExp exp

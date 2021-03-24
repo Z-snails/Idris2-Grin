@@ -19,7 +19,7 @@ import GRIN.Syntax
 import GRIN.ANF
 import GRIN.Pretty
 import GRIN.Optimisations.SimpleUnusedParameterElimination
-import GRIN.Optimisations.SimpleUnusedConstructorElimination
+import GRIN.Optimisations.SimpleCopyPropogation
 
 compileExpr :
     Ref Ctxt Defs ->
@@ -36,6 +36,7 @@ compileExpr d tmpDir outDir term outFile = do
     prettyProg <- logTime "Run Pipeline" $ runPipeline
         [ anfToGrin
         , liftTI Core.pure simpleUnusedParameterElimination
+        , liftTI Core.pure simpleCopyPropogation
         , liftTI Core.pure prettyGrin
         ] cdata.anf
 

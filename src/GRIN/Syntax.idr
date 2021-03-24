@@ -3,6 +3,11 @@ module GRIN.Syntax
 import Core.Name
 
 ||| Grin variable.
+{-
+TODO: Make this into two types
+- Function name
+- Arguments
+-}
 public export
 data GrinVar : Type where
     ||| Local variable.
@@ -70,9 +75,14 @@ export
 Eq Tag where
     t1 == t2 = t1.tagType == t2.tagType && t1.tagName == t2.tagName
 
+thenCmp : Ordering -> Lazy Ordering -> Ordering
+thenCmp LT _ = LT
+thenCmp EQ y = y
+thenCmp GT _ = GT
+
 export
 Ord Tag where
-    t1 `compare` t2 = (t1.tagType `compare` t2.tagType) <+> (t1.tagName `compare` t2.tagName)
+    t1 `compare` t2 = (t1.tagType `compare` t2.tagType) `thenCmp` (t1.tagName `compare` t2.tagName)
 
 ||| Literal in GRIN.
 ||| Note there is no Bool literal because Idris removes it
@@ -149,6 +159,13 @@ data CasePat : Type where
     TagPat : Tag -> CasePat
     LitPat : GrinLit -> CasePat
     Default : CasePat
+
+||| Get the tag from a case pattern
+export
+getCaseTag : CasePat -> Maybe Tag
+getCaseTag (NodePat tag _) = Just tag
+getCaseTag (TagPat tag) = Just tag
+getCaseTag _ = Nothing
 
 export
 fixPatNode : CasePat -> CasePat

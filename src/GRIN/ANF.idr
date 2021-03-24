@@ -9,6 +9,7 @@ import System
 import System.File
 
 import Libraries.Data.IntMap
+import Libraries.Data.NameMap
 import Libraries.Utils.Path
 
 import Core.Core
@@ -69,13 +70,13 @@ setVarPointer var isPointer = update PointerMap
         then insert var
         else delete var
 
-nextVar' :
+nextPointer :
     Ref NextId Int =>
     Ref PointerMap (SortedSet GrinVar) =>
-    (isPointer : Bool) -> Core GrinVar
-nextVar' ip = do
+    Core GrinVar
+nextPointer = do
     var <- nextVar
-    setVarPointer var ip
+    setVarPointer var True
     pure var
 
 ||| Returns constructor for lazy version of a function.
@@ -114,33 +115,24 @@ fromToPointer :
     Core exp
 fromToPointer np var = pure $ fromToPointer' !(varIsPointer var) np var
 
-getPointer :
-    {auto p : Either (exp = SimpleExp) (exp = GrinExp)} ->
-    (needPointer : Bool) -> Val ->
-    exp
-getPointer {p = Left prf} np v =
-    rewrite prf in if np then Store v else Pure v
-getPointer {p = Right prf} np v =
-    rewrite prf in Simple $ getPointer {p = Left Refl} np v
-
-fetches :
+stores :
     Ref NextId Int =>
     Ref VarMap (IntMap GrinVar) =>
     Ref PointerMap (SortedSet GrinVar) =>
     List AVar ->
     (List GrinVar -> Core GrinExp) ->
     Core GrinExp
-fetches args k = go args []
+stores args k = go args []
   where
     go : List AVar -> List GrinVar -> Core GrinExp
     go [] acc = k (reverse acc)
     go (ANull :: args) acc = do
-        var <- nextVar' True
-        pure $ Bind (VVar var) (getPointer True $ VTag erasedTag)
+        var <- nextPointer
+        pure $ Bind (VVar var) (Store $ VTag erasedTag)
              !(go args (var :: acc))
     go (ALocal i :: args) acc = do
         var <- getAnfVar i
-        var' <- nextVar' True
+        var' <- nextPointer
         pure $ Bind (VVar var') !(fromToPointer True var) -- function arguments are pointers
              !(go args (var' :: acc))
 
@@ -153,40 +145,36 @@ compilePrimFn :
     Ref NextId Int =>
     Ref VarMap (IntMap GrinVar) =>
     Ref PointerMap (SortedSet GrinVar) =>
-    (needPointer : Bool) -> -- whether a pointer is required
     Maybe LazyReason ->
     PrimFn arity ->
     Vect arity AVar ->
     (GrinVar -> Core GrinExp) -> -- rest of the grin expression
     Core GrinExp
-compilePrimFn np Nothing fn args k = do -- strict
+compilePrimFn Nothing fn args k = do -- strict
     -- TODO: add primitive functions to output when they're used
     -- for now just add them all
     res <- nextVar
     ret <- nextVar
-    setVarPointer ret np
-    fetches (forgetLen args) \args' =>
+    stores (forgetLen args) \args' =>
         pure $ Bind (VVar res) (App (Grin $ getPrimFnName fn) args')
-             $ Bind (VVar ret) !(fromToPointer np res)
+             $ Bind (VVar ret) !(fromToPointer False res)
              !(k ret)
-compilePrimFn np (Just lazy) fn args k = -- lazy
-    fetches (forgetLen args) \args' => do
+compilePrimFn (Just lazy) fn args k = -- lazy
+    stores (forgetLen args) \args' => do
         ret <- nextVar
-        setVarPointer ret np
-        pure $ Bind (VVar ret) (getPointer np $ VTagNode (getLazyTag lazy $ Grin $ getPrimFnName fn) $ SVar <$> args')
+        pure $ Bind (VVar ret) (Pure $ VTagNode (getLazyTag lazy $ Grin $ getPrimFnName fn) $ SVar <$> args')
              !(k ret)
 
 compileExtPrim : 
     Ref NextId Int =>
     Ref VarMap (IntMap GrinVar) =>
     Ref PointerMap (SortedSet GrinVar) =>
-    (needPointer : Bool) -> -- whether a pointer is required
     Maybe LazyReason ->
     Name ->
     List AVar ->
     (GrinVar -> Core GrinExp) -> -- rest of the grin expression
     Core GrinExp
-compileExtPrim np ret _ f args = assert_total $ idris_crash "compileExtPrim is not yet implemented"
+compileExtPrim ret _ f args = assert_total $ idris_crash "compileExtPrim is not yet implemented"
 -- TODO: Get external function expected type
 -- if primtive then unwrap else just pass it
 
@@ -197,71 +185,70 @@ mutual
         Ref NextId Int =>
         Ref VarMap (IntMap GrinVar) =>
         Ref PointerMap (SortedSet GrinVar) =>
-        (needPointer : Bool) -> -- whether a pointer is required
         ANF -> -- ANF expression to compile
         (GrinVar -> Core GrinExp) -> -- rest of the grin expression
         Core GrinExp
-    compileANF np (AV _ ANull) k = do
-        ret <- nextVar' np
-        pure $ Bind (VVar ret) (getPointer np $ VTag erasedTag) -- for now this is just a tag
+    compileANF (AV _ ANull) k = do
+        ret <- nextVar
+        pure $ Bind (VVar ret) (Pure $ VTag erasedTag) -- for now this is just a tag
              !(k ret)                                   -- but I'd like it to be removed entirely
                                                         -- I don't know if actually removing the argument
                                                         -- will be added to `CExp` backends.
-    compileANF np (AV _ (ALocal ai)) k = do
+    compileANF (AV _ (ALocal ai)) k = do
         i <- getAnfVar ai -- get the GRIN variable
-        ret <- nextVar' np
-        pure $ Bind (VVar ret) !(fromToPointer np i)
+        ret <- nextVar
+        pure $ Bind (VVar ret) !(fromToPointer False i)
              !(k ret)
-    compileANF np (AAppName _ Nothing n args) k = do
+    compileANF (AAppName _ Nothing n args) k = do
         i <- nextVar -- result of function
-        fetches args \args' => do
-            ret <- nextVar' np
+        stores args \args' => do
+            ret <- nextVar
             pure $ Bind (VVar i) (App (Fixed n) args') -- functions always return values
-                 $ Bind (VVar ret) !(fromToPointer np i) -- GRIN will optimise this if pure
+                 $ Bind (VVar ret) !(fromToPointer False i) -- GRIN will optimise this if pure
                  !(k ret)
-    compileANF np (AAppName _ (Just lazy) n args) k =
-        fetches args \args' => do
-            ret <- nextVar' np
-            pure $ Bind (VVar ret) (getPointer np $ VTagNode (getLazyTag lazy $ Fixed n) (SVar <$> args'))
+    compileANF (AAppName _ (Just lazy) n args) k =
+        stores args \args' => do
+            ret <- nextVar
+            pure $ Bind (VVar ret) (Pure $ VTagNode (getLazyTag lazy $ Fixed n) (SVar <$> args'))
                  !(k ret)
-    compileANF np (AUnderApp _ n missing args) k =
-        fetches args \args' => do
-            ret <- nextVar' np
-            pure $ Bind (VVar ret) (getPointer np $ VTagNode (getPartialTag missing $ Fixed n) (SVar <$> args'))
+    compileANF (AUnderApp _ n missing args) k =
+        stores args \args' => do
+            ret <- nextVar
+            pure $ Bind (VVar ret) (Pure $ VTagNode (getPartialTag missing $ Fixed n) (SVar <$> args'))
                  !(k ret)
-    compileANF np (AApp _ lazy af aarg) k = do
+    compileANF (AApp _ lazy af aarg) k = do
         let ALocal af' = af
             | ANull => throw $ InternalError "Erased argument can't be called as a function"
         f <- getAnfVar af'
-        ret <- nextVar' np
+        ret <- nextVar
         case aarg of
             ALocal iarg => do
                 arg <- getAnfVar iarg
                 pure $ Bind (VVar ret) (App (getAppVar lazy) [f, arg])
                      !(k ret)
             ANull => do
-                arg <- nextVar' True -- function arguments are pointers
-                pure $ Bind (VVar arg) (getPointer True $ VTag erasedTag)
+                arg <- nextPointer -- function arguments are pointers
+                pure $ Bind (VVar arg) (Store $ VTag erasedTag)
                      $ Bind (VVar ret) (App (getAppVar lazy) [f, arg])
                      !(k ret)
-    compileANF np (ALet _ anf rhs rest) k = do
-        compileANF False rhs \res => do
+    compileANF (ALet _ anf rhs rest) k = do
+        compileANF rhs \res => do
             setAnfVar anf res
-            compileANF np rest k
-    compileANF np (ACon _ n _ []) k = do -- Constructors are always fully applied
-        ret <- nextVar' np
-        pure $ Bind (VVar ret) (getPointer np $ VTag $ MkTag Con $ Fixed n)
+            compileANF rest k
+    compileANF (ACon _ n _ []) k = do -- Constructors are always fully applied
+        ret <- nextVar
+        pure $ Bind (VVar ret) (Pure $ VTag $ MkTag Con $ Fixed n)
              !(k ret)
-    compileANF np (ACon _ n _ args) k =
-        fetches args \args' => do
-            ret <- nextVar' np
-            pure $ Bind (VVar ret) (getPointer np $ VTagNode (MkTag Con $ Fixed n) $ SVar <$> args')
+    compileANF (ACon _ n _ args) k =
+        stores args \args' => do
+            ret <- nextVar
+            pure $ Bind (VVar ret) (Pure $ VTagNode (MkTag Con $ Fixed n) $ SVar <$> args')
                  !(k ret)
-    compileANF np (AOp _ lazy op args) k = compilePrimFn np lazy op args k
+    compileANF (AOp _ lazy op args) k = compilePrimFn lazy op args k
         -- basically a normal function that calls the correct grin primitive
-    compileANF np (AExtPrim _ lazy op args) k = compileExtPrim np lazy op args k
-    compileANF _ (AConCase _ ANull _ _) _ = throw $ InternalError "Attempt to match on erased in ANF"
-    compileANF np (AConCase _ (ALocal var) alts def) k = do
+    compileANF (AExtPrim _ lazy op args) k = compileExtPrim lazy op args k
+    compileANF (AConCase _ ANull _ _) _ = throw $ InternalError "Attempt to match on erased in ANF"
+    compileANF (AConCase _ (ALocal var) alts def) k = do
         var' <- getAnfVar var
         fetched <- nextVar
         evaled <- nextVar
@@ -269,14 +256,14 @@ mutual
              $ Bind (VVar evaled) (eval fetched)
              $ Case (VVar evaled)
                 !(case def of
-                    Nothing => (traverse (\alt => compileAConAlt np alt k) alts)
+                    Nothing => (traverse (\alt => compileAConAlt alt k) alts)
                     Just exp => do
-                        alts <- traverse (\alt => compileAConAlt np alt k) alts
-                        defAlt <- pure [MkAlt Default !(compileANF np exp k)]
+                        alts <- traverse (\alt => compileAConAlt alt k) alts
+                        defAlt <- pure [MkAlt Default !(compileANF exp k)]
                         pure $ alts ++ defAlt
                 )
-    compileANF _ (AConstCase _ ANull _ _) _ = throw $ InternalError "Attempt to match on erased in ANF"
-    compileANF np (AConstCase _ (ALocal var) alts@(alt :: _) def) k = do
+    compileANF (AConstCase _ ANull _ _) _ = throw $ InternalError "Attempt to match on erased in ANF"
+    compileANF (AConstCase _ (ALocal var) alts@(alt :: _) def) k = do
         var' <- getAnfVar var
         fetched <- nextVar
         evaledUnwrapped <- nextVar
@@ -284,29 +271,29 @@ mutual
              $ Bind (unwrapPrim alt evaledUnwrapped) (eval fetched) -- unwrap primitive before passing to case
              $ Case (VVar evaledUnwrapped)
                 !(case def of
-                    Nothing => (traverse (\alt => compileAConstAlt np alt k) alts)
+                    Nothing => (traverse (\alt => compileAConstAlt alt k) alts)
                     Just exp => do
-                        alts <- traverse (\alt => compileAConstAlt np alt k) alts
-                        defAlt <- pure [MkAlt Default !(compileANF np exp k)]
+                        alts <- traverse (\alt => compileAConstAlt alt k) alts
+                        defAlt <- pure [MkAlt Default !(compileANF exp k)]
                         pure $ alts ++ defAlt
                 )
-    compileANF np (AConstCase _ (ALocal var) [] (Just exp)) k = do
+    compileANF (AConstCase _ (ALocal var) [] (Just exp)) k = do
         var' <- getAnfVar var
         fetched <- nextVar
         ign <- nextVar
         pure $ Bind (VVar fetched) !(fromToPointer True var') -- make pointer before passing to eval
              $ Bind (VVar ign) (eval fetched) -- evaluate to ensure correct laziness semantics (I think)
-             !(compileANF np exp k)
-    compileANF _ (AConstCase _ _ [] Nothing) _ = throw $ InternalError "Empty case block"
-    compileANF np (APrimVal _ val) k = do
-        ret <- nextVar' np
-        pure $ Bind (VVar ret) (getPointer np $ getConstVal val)
+             !(compileANF exp k)
+    compileANF (AConstCase _ _ [] Nothing) _ = throw $ InternalError "Empty case block"
+    compileANF (APrimVal _ val) k = do
+        ret <- nextVar
+        pure $ Bind (VVar ret) (Pure $ getConstVal val)
              !(k ret)
-    compileANF np (AErased _) k = do
-        ret <- nextVar' np
-        pure $ Bind (VVar ret) (getPointer np $ VTag erasedTag)
+    compileANF (AErased _) k = do
+        ret <- nextVar
+        pure $ Bind (VVar ret) (Pure $ VTag erasedTag)
              !(k ret)
-    compileANF np (ACrash _ msg) _ = do
+    compileANF (ACrash _ msg) _ = do
         msg' <- nextVar
         pure $ Bind (VVar msg') (Pure $ primTagNode "String" $ LString msg)
              $ Simple $ App (Grin "prim__idris_crash") [msg']
@@ -315,27 +302,25 @@ mutual
         Ref NextId Int =>
         Ref VarMap (IntMap GrinVar) =>
         Ref PointerMap (SortedSet GrinVar) =>
-        (needPointer : Bool) -> -- whether a pointer is required
         AConAlt ->
         (GrinVar -> Core GrinExp) -> -- rest of the grin expression
         Core GrinAlt
-    compileAConAlt np (MkAConAlt n _ [] exp) k =
-        pure $ MkAlt (TagPat $ MkTag Con $ Fixed n) !(compileANF np exp k)
-    compileAConAlt np (MkAConAlt n _ args exp) k = do
+    compileAConAlt (MkAConAlt n _ [] exp) k =
+        pure $ MkAlt (TagPat $ MkTag Con $ Fixed n) !(compileANF exp k)
+    compileAConAlt (MkAConAlt n _ args exp) k = do
         args' <- traverse getAnfVar args
         pure $ MkAlt (NodePat (MkTag Con $ Fixed n) args')
-             !(compileANF np exp k)
+             !(compileANF exp k)
 
     compileAConstAlt :
         Ref NextId Int =>
         Ref VarMap (IntMap GrinVar) =>
         Ref PointerMap (SortedSet GrinVar) =>
-        (needPointer : Bool) -> -- whether a pointer is required
         AConstAlt ->
         (GrinVar -> Core GrinExp) -> -- rest of the grin expression
         Core GrinAlt
-    compileAConstAlt np (MkAConstAlt c exp) k =
-        pure $ MkAlt (getConstPat c) !(compileANF np exp k)
+    compileAConstAlt (MkAConstAlt c exp) k =
+        pure $ MkAlt (getConstPat c) !(compileANF exp k)
 
 data GrinDefs : Type where -- top level grin defs
 data Eval : Type where -- eval function alternatives
@@ -451,6 +436,21 @@ compileFFI fn (cc :: ccs) args ret = case parseCC cc of
     Just ("C", [cfn, clib, chdr]) => compileCFFI fn args ret cfn clib
     _ => compileFFI fn ccs args ret
 
+compileCon :
+    Ref NextId Int =>
+    Ref Eval (List (GrinVar -> Core GrinAlt)) =>
+    Name -> Nat -> Core ()
+compileCon name arity = do
+    let tag = MkTag Con $ Fixed name
+        evalAlt : GrinVar -> Core GrinAlt
+        evalAlt = \argv => case arity of
+            Z => pure $ MkAlt (TagPat tag) (Simple $ Pure $ VVar $ argv)
+            _ => do
+                args <- replicateCore arity nextVar
+                pure $ MkAlt (NodePat tag args) $ Simple $ Pure $ VVar argv
+                -- if a constructor just return it no need to write it out again
+    update Eval (evalAlt ::)
+
 ||| compile an ANF definition.
 compileANFDef :
     Ref NextId Int =>
@@ -470,22 +470,13 @@ compileANFDef (name, MkAFun args exp) = do
     def <- pure $ (MkDef
             (Fixed name)
             args'
-            !(compileANF False exp \ret =>
+            !(compileANF exp \ret =>
             (pure $ Simple $ Pure $ VVar ret)))
     let arity = length args
     addFunToApp name arity
     addFunToEval name arity
     update GrinDefs (def ::)
-compileANFDef (name, MkACon _ arity _) = do
-    let tag = MkTag Con $ Fixed name
-        evalAlt : GrinVar -> Core GrinAlt
-        evalAlt = \argv => case arity of
-            Z => pure $ MkAlt (TagPat tag) (Simple $ Pure $ VVar $ argv)
-            _ => do
-                args <- replicateCore arity nextVar
-                pure $ MkAlt (NodePat tag args) $ Simple $ Pure $ VVar argv
-                -- if a constructor just return it no need to write it out again
-    update Eval (evalAlt ::)
+compileANFDef (name, MkACon _ arity _) = compileCon name arity
 compileANFDef (name, MkAForeign ccs argTy retTy) = do -- TODO: add ffi
     compileFFI name ccs argTy retTy
 compileANFDef (name, MkAError exp) = compileANFDef (name, MkAFun [] exp)

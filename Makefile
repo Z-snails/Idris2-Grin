@@ -17,6 +17,9 @@ install : $(idris2grin)
 run : $(idris2grin)
 	$(idris2grin)
 
+typecheck :
+	$(idris2) --typecheck idris2grin.ipkg
+
 clean :
 	rm -rf ./build/
 	rm -rf ./.output
