@@ -132,11 +132,6 @@ data Val : Type where
     ||| Unit.
     VUnit : Val
 
-export
-fixValNode : Val -> Val
-fixValNode (VTagNode tag []) = VTag tag
-fixValNode val = val
-
 ||| Grin literal.
 public export
 VLit : GrinLit -> Val 

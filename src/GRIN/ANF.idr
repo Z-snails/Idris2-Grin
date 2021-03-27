@@ -128,7 +128,7 @@ stores args k = go args []
     go [] acc = k (reverse acc)
     go (ANull :: args) acc = do
         var <- nextPointer
-        pure $ Bind (VVar var) (Store $ VTag erasedTag)
+        pure $ Bind (VVar var) (Store $ VTagNode erasedTag [])
              !(go args (var :: acc))
     go (ALocal i :: args) acc = do
         var <- getAnfVar i
@@ -190,10 +190,10 @@ mutual
         Core GrinExp
     compileANF (AV _ ANull) k = do
         ret <- nextVar
-        pure $ Bind (VVar ret) (Pure $ VTag erasedTag) -- for now this is just a tag
-             !(k ret)                                   -- but I'd like it to be removed entirely
-                                                        -- I don't know if actually removing the argument
-                                                        -- will be added to `CExp` backends.
+        pure $ Bind (VVar ret) (Pure $ VTagNode erasedTag []) -- for now this is just a tag
+             !(k ret)                                         -- but I'd like it to be removed entirely
+                                                              -- I don't know if actually removing the argument
+                                                              -- will be added to `CExp` backends.
     compileANF (AV _ (ALocal ai)) k = do
         i <- getAnfVar ai -- get the GRIN variable
         ret <- nextVar
@@ -228,7 +228,7 @@ mutual
                      !(k ret)
             ANull => do
                 arg <- nextPointer -- function arguments are pointers
-                pure $ Bind (VVar arg) (Store $ VTag erasedTag)
+                pure $ Bind (VVar arg) (Store $ VTagNode erasedTag [])
                      $ Bind (VVar ret) (App (getAppVar lazy) [f, arg])
                      !(k ret)
     compileANF (ALet _ anf rhs rest) k = do
@@ -237,7 +237,7 @@ mutual
             compileANF rest k
     compileANF (ACon _ n _ []) k = do -- Constructors are always fully applied
         ret <- nextVar
-        pure $ Bind (VVar ret) (Pure $ VTag $ MkTag Con $ Fixed n)
+        pure $ Bind (VVar ret) (Pure $ VTagNode (MkTag Con $ Fixed n) [])
              !(k ret)
     compileANF (ACon _ n _ args) k =
         stores args \args' => do
@@ -291,7 +291,7 @@ mutual
              !(k ret)
     compileANF (AErased _) k = do
         ret <- nextVar
-        pure $ Bind (VVar ret) (Pure $ VTag erasedTag)
+        pure $ Bind (VVar ret) (Pure $ VTagNode erasedTag [])
              !(k ret)
     compileANF (ACrash _ msg) _ = do
         msg' <- nextVar
@@ -364,7 +364,7 @@ addFunToApp fn arity = traverse_ addArity [1 .. arity] -- how many are missing
                 pure $ MkAlt
                     (if missing == arity then TagPat tag else NodePat tag args)
                     $ case missing of
-                        1 => Simple $ Pure $ fixValNode $ VTagNode (getLazyTag lazy $ Fixed fn)
+                        1 => Simple $ Pure $ VTagNode (getLazyTag lazy $ Fixed fn)
                                 (SVar <$> args ++ [arg])
                         _ => Simple $ Pure $ VTagNode tag1 (SVar <$> args ++ [arg])
         in addApps (altS, altL LLazy, altL LInf)

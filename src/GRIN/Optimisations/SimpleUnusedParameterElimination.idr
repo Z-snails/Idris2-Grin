@@ -88,7 +88,7 @@ removeUnusedVal : UsedVarMap -> Val -> Val
 removeUnusedVal nm = \case
     val@(VTagNode tag args) => case getName tag of
         Nothing => val
-        Just n => fixValNode $ VTagNode tag $ removeUnusedArgs nm n args
+        Just n => VTagNode tag $ removeUnusedArgs nm n args
     val => val
 
 removeUnusedCPat : UsedVarMap -> CasePat -> CasePat

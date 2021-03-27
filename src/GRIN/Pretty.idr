@@ -148,7 +148,7 @@ prettySimpleVal (SUndefined ty) = "#undefined :: " <+> prettyGrinType ty
 prettyVal : Val -> Builder
 prettyVal (VTagNode tag args) =
     bracket $ prettyTag tag <+> spaceSep (prettySimpleVal <$> args)
-prettyVal (VTag tag) = bracket $ prettyTag tag
+prettyVal (VTag tag) = prettyTag tag
 prettyVal (VSimpleVal val) = prettySimpleVal val
 prettyVal VUnit = "()"
 
