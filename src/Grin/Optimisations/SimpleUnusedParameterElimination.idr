@@ -1,4 +1,4 @@
-module GRIN.Optimisations.SimpleUnusedParameterElimination
+module Grin.Optimisations.SimpleUnusedParameterElimination
 
 import Data.SortedSet
 import Data.SortedMap
@@ -7,7 +7,7 @@ import Core.Name
 
 import Compiler.Pipeline
 
-import GRIN.Syntax
+import Grin.Syntax
 
 number : List a -> List (Nat, a)
 number = number' 0

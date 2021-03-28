@@ -2,16 +2,16 @@ module Core.Instances
 
 import Core.Core
 
-export
+public export
 Functor Core where
     map = Core.map
 
-export
+public export
 Applicative Core where
     pure = Core.pure
     (<*>) = Core.(<*>)
 
-export
+public export
 Monad Core where
     (>>=) = Core.(>>=)
-    join x = Core.(>>=) x id
+    join mm = Core.(>>=) mm id

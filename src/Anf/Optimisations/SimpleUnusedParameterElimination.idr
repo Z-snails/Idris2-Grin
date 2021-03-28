@@ -1,5 +1,5 @@
 ||| Unfinished
-module ANF.Optimisations.SimpleUnusedParameterElimination
+module Anf.Optimisations.SimpleUnusedParameterElimination
 
 -- I have realised this might be hard because an AApp might try applying a
 -- function that doesn't need any more arguments, so I will do this in grin

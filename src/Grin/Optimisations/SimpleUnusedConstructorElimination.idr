@@ -1,13 +1,13 @@
 -- I don't know if this will work without full heap points-to analysis so I'll leave it out for now
 
-module GRIN.Optimisations.SimpleUnusedConstructorElimination
+module Grin.Optimisations.SimpleUnusedConstructorElimination
 
 import Data.List
 import Data.SortedSet
 
 import Compiler.Pipeline
 
-import GRIN.Syntax
+import Grin.Syntax
 
 collectUsedVal : Val -> SortedSet Tag
 collectUsedVal (VTagNode tag _) = singleton tag

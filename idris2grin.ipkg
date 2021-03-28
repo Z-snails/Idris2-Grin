@@ -9,9 +9,9 @@ executable = idris2grin
 modules = Core.Instances
         , Compiler.Pipeline
         , Main
-        , GRIN.Syntax
-        , GRIN.Pretty
-        , GRIN.ANF
-        , GRIN.GRIN
-        , GRIN.Prim
-        , GRIN.Optimisations.SimpleUnusedParameterElimination
+        , Grin.Syntax
+        , Grin.Pretty
+        , Grin.AnfToGrin
+        , Grin.GrinCG
+        , Grin.Prim
+        , Grin.Optimisations.SimpleUnusedParameterElimination

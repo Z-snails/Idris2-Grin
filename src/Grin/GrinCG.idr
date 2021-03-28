@@ -1,4 +1,4 @@
-module GRIN.GRIN
+module Grin.GrinCG
 
 import Libraries.Utils.Path
 
@@ -15,11 +15,11 @@ import Compiler.Common
 import Compiler.Inline
 import Compiler.Pipeline
 
-import GRIN.Syntax
-import GRIN.ANF
-import GRIN.Pretty
-import GRIN.Optimisations.SimpleUnusedParameterElimination
-import GRIN.Optimisations.SimpleCopyPropogation
+import Grin.Syntax
+import Grin.AnfToGrin
+import Grin.Pretty
+import Grin.Optimisations.SimpleUnusedParameterElimination
+import Grin.Optimisations.SimpleCopyPropogation
 
 compileExpr :
     Ref Ctxt Defs ->
@@ -33,14 +33,14 @@ compileExpr d tmpDir outDir term outFile = do
         grin = "grin" -- for now hardcoded, maybe make configurable later
 
     cdata <- getCompileData True ANF term
-    prettyProg <- logTime "Run Pipeline" $ runPipeline
+    prog <- logTime "Run Pipeline" $ runPipeline {to=String}
         [ anfToGrin
         , liftTI Core.pure simpleUnusedParameterElimination
         , liftTI Core.pure simpleCopyPropogation
         , liftTI Core.pure prettyGrin
         ] cdata.anf
 
-    Right () <- logTime "Save Grin" $ coreLift $ writeFile outGrinFile prettyProg
+    Right () <- logTime "Save Grin" $ coreLift $ writeFile outGrinFile prog
         | Left err => throw $ FileErr outGrinFile err
 
     pure $ Just outGrinFile

@@ -1,4 +1,4 @@
-module GRIN.Prim
+module Grin.Prim
 
 import Data.Vect
 import Data.List
@@ -7,7 +7,7 @@ import Core.TT
 import Core.Core
 import Compiler.ANF
 
-import GRIN.Syntax
+import Grin.Syntax
 
 export
 replicateCore : Nat -> Core a -> Core (List a)
@@ -107,37 +107,37 @@ primTag = MkTag Con . Grin
 
 ||| Make a unary primitive Tag.
 export
-primTagNode : String -> GrinLit -> Val
-primTagNode n val = VTagNode (primTag n) [SLit val]
+primTagUnary : String -> GrinLit -> Val
+primTagUnary n val = VTagNode (primTag n) [SLit val]
 
 ||| Make a primitive Tag as a value.
-primTagVal : String -> Val
-primTagVal = VTag . primTag
+primTagNonary : String -> Val
+primTagNonary tag = VTagNode (primTag tag) []
 
 ||| Convert constant to a GRIN value.
 export
 getConstVal : Constant -> Val -- all these look very similar, generalise into one?
 getConstVal = \case
-    I i => primTagNode "Int" $ LInt i
-    BI i => primTagNode "Integer" $ LInt $ cast i
-    B8 i => primTagNode "Bits8" $ LBits64 $ cast i
-    B16 i => primTagNode "Bits16" $ LBits64 $ cast i
-    B32 i => primTagNode "Bits32" $ LBits64 $ cast i
-    B64 i => primTagNode "Bits64" $ LBits64 $ cast i
-    Str s => primTagNode "String" $ LString s
-    Ch c => primTagNode "Char" $ LChar c
-    Db d => primTagNode "Double" $ LDouble d
-    WorldVal => primTagVal "World"
-    IntType => primTagVal "IntType"
-    IntegerType => primTagVal "IntegerType"
-    Bits8Type => primTagVal "Bits8Type"
-    Bits16Type => primTagVal "Bits16Type"
-    Bits32Type => primTagVal "Bits32Type"
-    Bits64Type => primTagVal "Bits64Type"
-    StringType => primTagVal "StringType"
-    CharType => primTagVal "CharType"
-    DoubleType => primTagVal "DoubleType"
-    WorldType => primTagVal "WorldType"
+    I i => primTagUnary "Int" $ LInt i
+    BI i => primTagUnary "Integer" $ LInt $ cast i
+    B8 i => primTagUnary "Bits8" $ LBits64 $ cast i
+    B16 i => primTagUnary "Bits16" $ LBits64 $ cast i
+    B32 i => primTagUnary "Bits32" $ LBits64 $ cast i
+    B64 i => primTagUnary "Bits64" $ LBits64 $ cast i
+    Str s => primTagUnary "String" $ LString s
+    Ch c => primTagUnary "Char" $ LChar c
+    Db d => primTagUnary "Double" $ LDouble d
+    WorldVal => primTagNonary "World"
+    IntType => primTagNonary "IntType"
+    IntegerType => primTagNonary "IntegerType"
+    Bits8Type => primTagNonary "Bits8Type"
+    Bits16Type => primTagNonary "Bits16Type"
+    Bits32Type => primTagNonary "Bits32Type"
+    Bits64Type => primTagNonary "Bits64Type"
+    StringType => primTagNonary "StringType"
+    CharType => primTagNonary "CharType"
+    DoubleType => primTagNonary "DoubleType"
+    WorldType => primTagNonary "WorldType"
 
 ||| Get a case pattern for a primtive constant
 export

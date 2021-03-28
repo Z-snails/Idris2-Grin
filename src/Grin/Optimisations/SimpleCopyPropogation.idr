@@ -1,10 +1,10 @@
-module GRIN.Optimisations.SimpleCopyPropogation
+module Grin.Optimisations.SimpleCopyPropogation
 
 import Data.SortedMap
 
 import Compiler.Pipeline
 
-import GRIN.Syntax
+import Grin.Syntax
 
 CopyMap : Type
 CopyMap = SortedMap GrinVar GrinVar

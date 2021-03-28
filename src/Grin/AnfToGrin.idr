@@ -1,4 +1,4 @@
-module GRIN.ANF
+module Grin.AnfToGrin
 
 import Data.Vect
 import Data.SortedSet
@@ -21,9 +21,9 @@ import Compiler.ANF
 import Compiler.Common
 import Compiler.Pipeline
 
-import GRIN.Syntax
-import GRIN.Pretty
-import GRIN.Prim
+import Grin.Syntax
+import Grin.Pretty
+import Grin.Prim
 
 ||| Map from ANF indexes to GRIN variables
 data VarMap : Type where
@@ -295,7 +295,7 @@ mutual
              !(k ret)
     compileANF (ACrash _ msg) _ = do
         msg' <- nextVar
-        pure $ Bind (VVar msg') (Pure $ primTagNode "String" $ LString msg)
+        pure $ Bind (VVar msg') (Pure $ primTagUnary "String" $ LString msg)
              $ Simple $ App (Grin "prim__idris_crash") [msg']
 
     compileAConAlt :

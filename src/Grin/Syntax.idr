@@ -1,4 +1,4 @@
-module GRIN.Syntax
+module Grin.Syntax
 
 import Core.Name
 

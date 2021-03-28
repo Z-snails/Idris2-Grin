@@ -1,4 +1,4 @@
-module GRIN.Pretty
+module Grin.Pretty
 
 import Data.String
 import Data.List
@@ -7,7 +7,7 @@ import Core.Name
 
 import Compiler.Pipeline
 
-import GRIN.Syntax
+import Grin.Syntax
 
 ||| Number of spaces to indent.
 indentSize : Nat

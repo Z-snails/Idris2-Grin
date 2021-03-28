@@ -1,6 +1,6 @@
 module Main
 
-import GRIN.GRIN
+import Grin.GrinCG
 import Idris.Driver
 import Compiler.Common
 
