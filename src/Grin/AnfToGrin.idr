@@ -53,7 +53,7 @@ setAnfVar i var = update VarMap $ insert i var
 data PointerMap : Type where
 
 ||| Check if a variable is a pointer.
-||| Defaults to is a pointer.
+||| Defaults to isn't a pointer.
 varIsPointer : Ref PointerMap (SortedSet GrinVar) => GrinVar -> Core Bool
 varIsPointer var = pure $ contains var !(get PointerMap)
 
@@ -305,8 +305,6 @@ mutual
         AConAlt ->
         (GrinVar -> Core GrinExp) -> -- rest of the grin expression
         Core GrinAlt
-    compileAConAlt (MkAConAlt n _ [] exp) k =
-        pure $ MkAlt (TagPat $ MkTag Con $ Fixed n) !(compileANF exp k)
     compileAConAlt (MkAConAlt n _ args exp) k = do
         args' <- traverse getAnfVar args
         pure $ MkAlt (NodePat (MkTag Con $ Fixed n) args')
@@ -355,14 +353,14 @@ addFunToApp fn arity = traverse_ addArity [1 .. arity] -- how many are missing
             altS = \arg => do
                 args <- replicateCore (arity `minus` missing) nextVar
                 pure $ MkAlt
-                    (if missing == arity then TagPat tag else NodePat tag args)
+                    (NodePat tag args)
                     $ case missing of
                         1 => Simple $ App (Fixed fn) ((if arity <= missing then [] else args) ++ [arg])
                         _ => Simple $ Pure $ VTagNode tag1 (SVar <$> args ++ [arg])
             altL = \lazy, arg => do
                 args <- replicateCore (arity `minus` missing) nextVar
                 pure $ MkAlt
-                    (if missing == arity then TagPat tag else NodePat tag args)
+                    (NodePat tag args)
                     $ case missing of
                         1 => Simple $ Pure $ VTagNode (getLazyTag lazy $ Fixed fn)
                                 (SVar <$> args ++ [arg])
@@ -411,6 +409,9 @@ record PrimFnInfo where
     externs : List External
     wrapper : List GrinDef
 
+addExternal : Ref PFInfo PrimFnInfo => External -> Core ()
+addExternal ext = update PFInfo $ record {externs $= (ext ::)}
+
 Semigroup PrimFnInfo where
     l <+> r = MkPF (l.externs ++ r.externs) (l.wrapper ++ r.wrapper)
 
@@ -420,7 +421,10 @@ compileCFFI : Ref PFInfo PrimFnInfo =>
     (cFunction : String) ->
     (cLibrary : String) ->
     Core ()
-compileCFFI fn args ret cfn clib = pure ()
+compileCFFI fn args ret cfn clib = do
+    let extName = "\"_prim" ++ show fn ++ "\""
+    addExternal $ MkExt extName (TySimple $ getGrinFFIType ret) (TySimple . getGrinFFIType <$> args) True False
+
 -- TODO: make wrapper function
 -- TODO: add externals
 
@@ -439,13 +443,11 @@ compileFFI fn (cc :: ccs) args ret = case parseCC cc of
 compileCon :
     Ref NextId Int =>
     Ref Eval (List (GrinVar -> Core GrinAlt)) =>
-    Name -> Nat -> Core ()
+    GrinVar -> Nat -> Core ()
 compileCon name arity = do
-    let tag = MkTag Con $ Fixed name
+    let tag = MkTag Con name
         evalAlt : GrinVar -> Core GrinAlt
-        evalAlt = \argv => case arity of
-            Z => pure $ MkAlt (TagPat tag) (Simple $ Pure $ VVar $ argv)
-            _ => do
+        evalAlt = \argv => do
                 args <- replicateCore arity nextVar
                 pure $ MkAlt (NodePat tag args) $ Simple $ Pure $ VVar argv
                 -- if a constructor just return it no need to write it out again
@@ -476,7 +478,7 @@ compileANFDef (name, MkAFun args exp) = do
     addFunToApp name arity
     addFunToEval name arity
     update GrinDefs (def ::)
-compileANFDef (name, MkACon _ arity _) = compileCon name arity
+compileANFDef (name, MkACon _ arity _) = compileCon (Fixed name) arity
 compileANFDef (name, MkAForeign ccs argTy retTy) = do -- TODO: add ffi
     compileFFI name ccs argTy retTy
 compileANFDef (name, MkAError exp) = compileANFDef (name, MkAFun [] exp)
@@ -495,6 +497,8 @@ compileANFProg defs = do
     nextId <- newRef NextId 0
     primFnInfo <- newRef PFInfo $ MkPF [] []
     defs <- traverse compileANFDef defs
+    
+    traverse_ (uncurry compileCon) primCons
 
     evalAlts <- get Eval
     evalFn <- do

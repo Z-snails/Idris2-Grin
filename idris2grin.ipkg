@@ -2,6 +2,8 @@ package grin
 
 depends = idris2, network, contrib
 
+version = 0.1.0
+
 sourcedir = "src"
 main = Main
 executable = idris2grin

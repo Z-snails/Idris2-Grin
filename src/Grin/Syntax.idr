@@ -98,9 +98,11 @@ data GrinLit : Type where
 -- Hopefully native Bits<n> types will be added to GRIN
 public export
 data SimpleType : Type where
-    IntTy : SimpleType
+    Int64Ty : SimpleType
     Bits64Ty : SimpleType
     DoubleTy : SimpleType
+    UnitTy : SimpleType
+    PtrTy : SimpleType
     CharTy : SimpleType
     StringTy : SimpleType
 
@@ -162,11 +164,6 @@ getCaseTag (NodePat tag _) = Just tag
 getCaseTag (TagPat tag) = Just tag
 getCaseTag _ = Nothing
 
-export
-fixPatNode : CasePat -> CasePat
-fixPatNode (NodePat tag []) = TagPat tag
-fixPatNode pat = pat
-
 mutual
     ||| Simple GRIN expression.
     public export
@@ -213,7 +210,7 @@ public export
 record External where
     constructor MkExt
     ||| Name of the external function.
-    name : GrinVar
+    name : String
     ||| Return type of the function
     retTy : GrinType
     ||| Argument types

@@ -1,25 +1,25 @@
-idris2 = idris2
-target = idris2grin
-builddir = ./build/exec
-idris2grin = $(builddir)/$(target)
+IDRIS = idris2
+TARGET = idris2grin
+BUILDDIR = ./build/exec
+IDRISGRIN = $(BUILDDIR)/$(TARGET)
+PACKAGE = idris2grin.ipkg
 
-.PHONY : self-host install run clean
+.PHONY : self-host install run typecheck clean
 
-$(idris2grin) : ./src/**/*.idr idris2grin.ipkg
-	$(idris2) --build idris2grin.ipkg
+$(IDRISGRIN) : ./src/**/*.idr $(PACKAGE)
+	$(IDRIS) --build $(PACKAGE)
 
-self-host : ./src/**/*.idr idris2grin.ipkg $(idris2grin)
-	$(idris2grin) --build idris2grin.ipkg
+self-host : ./src/**/*.idr $(PACKAGE) $(IDRISGRIN)
+	$(IDRISGRIN) --build $(PACKAGE)
 
-install : $(idris2grin)
-	$(idris2) --install idris2grin.ipkg
+install : $(IDRISGRIN)
+	$(IDRIS) --install $(PACKAGE)
 
-run : $(idris2grin)
-	$(idris2grin)
+run : $(IDRISGRIN)
+	$(IDRISGRIN)
 
 typecheck :
-	$(idris2) --typecheck idris2grin.ipkg
+	$(IDRIS) --typecheck $(PACKAGE)
 
 clean :
-	rm -rf ./build/
-	rm -rf ./.output
+	$(IDRIS) --clean $(PACKAGE)

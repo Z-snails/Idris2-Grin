@@ -1,0 +1,10 @@
+
+
+ffi pure
+    _prim_add_Int :: T_Int64 -> T_Int64 -> T_Int64
+
+grinMain =
+    x <- pure 42
+    y <- pure 38
+    z <- _prim_add_Int x y
+    _prim_int_print z

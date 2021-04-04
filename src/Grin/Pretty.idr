@@ -107,12 +107,8 @@ prettyTagType (Missing missing) = "P" <+> showB missing
 
 ||| Pretty print a tag.
 prettyTag : Tag -> Builder
-prettyTag (MkTag{tagType, tagName = (Fixed tagName)}) =
-    prettyTagType tagType <+> "\"" <+> prettyName tagName <+> "\""
-prettyTag (MkTag{tagType, tagName = (Grin tagName)}) =
-    prettyTagType tagType <+> fromString tagName
-prettyTag (MkTag{tagType, tagName = (Var _)}) =
-    "Internal Error: Unexpected `Var` in `Tag`"
+prettyTag (MkTag{tagType, tagName}) =
+    prettyTagType tagType <+> prettyGrinVar tagName
 
 ||| Pretty print a GRIN literal.
 prettyGrinLit : GrinLit -> Builder
@@ -126,9 +122,11 @@ prettyGrinLit = \case
 ||| Pretty print a simple type.
 prettySimpleType : SimpleType -> Builder
 prettySimpleType = \case
-    IntTy => "T_Int64"
+    Int64Ty => "T_Int64"
     Bits64Ty => "T_Word64"
     DoubleTy => "T_Float"
+    UnitTy => "T_Unit"
+    PtrTy => "T_Location"
     CharTy => "T_Char"
     StringTy => "T_String"
 
@@ -155,7 +153,7 @@ prettyVal VUnit = "()"
 ||| Pretty print a case pattern.
 prettyCPat : CasePat -> Builder
 prettyCPat (NodePat tag args) = bracket $ prettyTag tag <+> spaceSep (prettyGrinVar <$> args)
-prettyCPat (TagPat tag) = bracket $ prettyTag tag
+prettyCPat (TagPat tag) = prettyTag tag
 prettyCPat (LitPat lit) = prettyGrinLit lit
 prettyCPat Default = "#default"
 
@@ -197,7 +195,7 @@ prettyGrinDef (MkDef n args exp) =
 ||| Pretty print external information.
 prettyExternal : (indent : Nat) -> External -> Builder
 prettyExternal ind ext =
-    indent ind <+> foldMap (<+> " -> ") (prettyGrinType <$> ext.argTy) <+>
+    fromString ext.name <-> foldMap (<+> " -> ") (prettyGrinType <$> ext.argTy) <+>
     prettyGrinType ext.retTy
 
 ||| Include a Builder if a list is non-empty.
@@ -209,10 +207,10 @@ ifCons _ b = b
 prettyProg : GrinProg -> Builder
 prettyProg (MkProg exts defs) =
     let (primPure, primEff, ffiPure, ffiEff) = splitExterns exts in
-    ifCons primPure ("\nprimop pure" <+> nlSep (prettyExternal indentSize <$> primPure)) <+>
-    ifCons primPure ("\nprimop effectful" <+> nlSep (prettyExternal indentSize <$> primPure)) <+>
-    ifCons primPure ("\nffi pure" <+> nlSep (prettyExternal indentSize <$> primPure)) <+>
-    ifCons primPure ("\nffi effectful" <+> nlSep (prettyExternal indentSize <$> primPure)) <+>
+    ifCons primPure ("\nprimop pure" <+> nlSep ((indent indentSize <+> ) . prettyExternal indentSize <$> primPure)) <+>
+    ifCons primPure ("\nprimop effectful" <+> nlSep ((indent indentSize <+> ) . prettyExternal indentSize <$> primPure)) <+>
+    ifCons primPure ("\nffi pure" <+> nlSep ((indent indentSize <+> ) . prettyExternal indentSize <$> primPure)) <+>
+    ifCons primPure ("\nffi effectful" <+> nlSep ((indent indentSize <+> ) . prettyExternal indentSize <$> primPure)) <+>
     "\n" <+> nlSep (prettyGrinDef <$> defs)
 
 export

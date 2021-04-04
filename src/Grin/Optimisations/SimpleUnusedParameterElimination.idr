@@ -94,7 +94,7 @@ removeUnusedVal nm = \case
 removeUnusedCPat : UsedVarMap -> CasePat -> CasePat
 removeUnusedCPat nm pat@(NodePat tag args) = case getName tag of
     Nothing => pat
-    Just n => fixPatNode $ NodePat tag $ removeUnusedArgs nm n args
+    Just n => NodePat tag $ removeUnusedArgs nm n args
 removeUnusedCPat _ pat = pat
 
 mutual
