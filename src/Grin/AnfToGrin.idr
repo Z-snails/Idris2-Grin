@@ -1,9 +1,9 @@
 module Grin.AnfToGrin
 
-import Data.Vect
-import Data.SortedSet
-import Data.Maybe
 import Data.List
+import Data.Maybe
+import Data.SortedSet
+import Data.Vect
 
 import System
 import System.File
@@ -14,8 +14,10 @@ import Libraries.Utils.Path
 
 import Core.Core
 import Core.Context
+import Core.Context.Log
 import Core.CompileExpr
 import Core.TT
+import Core.Instances
 
 import Compiler.ANF
 import Compiler.Common
@@ -25,29 +27,32 @@ import Grin.Syntax
 import Grin.Pretty
 import Grin.Prim
 
+%hide Prelude.(>>)
+%hide Prelude.(>>=)
+
 ||| Map from ANF indexes to GRIN variables
-data VarMap : Type where
+data AnfVarMap : Type where
 
 ||| Get the GRIN var for an ANF index
 ||| Creates a new variable if necessary
 getAnfVar :
     Ref NextId Int =>
-    Ref VarMap (IntMap GrinVar) =>
+    Ref AnfVarMap (IntMap GrinVar) =>
     Int -> Core GrinVar
 getAnfVar i = do
-    map <- get VarMap
+    map <- get AnfVarMap
     case lookup i map of
         Nothing => do
             i' <- nextVar
-            update VarMap (insert i i')
+            update AnfVarMap (insert i i')
             pure i'
         Just i' => pure i'
 
 ||| Set the GRIN var for an ANF index
 setAnfVar :
-    Ref VarMap (IntMap GrinVar) =>
+    Ref AnfVarMap (IntMap GrinVar) =>
     Int -> GrinVar -> Core ()
-setAnfVar i var = update VarMap $ insert i var
+setAnfVar i var = update AnfVarMap $ insert i var
 
 ||| Whether each variable is a pointer or value.
 data PointerMap : Type where
@@ -117,7 +122,7 @@ fromToPointer np var = pure $ fromToPointer' !(varIsPointer var) np var
 
 stores :
     Ref NextId Int =>
-    Ref VarMap (IntMap GrinVar) =>
+    Ref AnfVarMap (IntMap GrinVar) =>
     Ref PointerMap (SortedSet GrinVar) =>
     List AVar ->
     (List GrinVar -> Core GrinExp) ->
@@ -143,7 +148,7 @@ forgetLen (x :: xs) = x :: forgetLen xs
 
 compilePrimFn : 
     Ref NextId Int =>
-    Ref VarMap (IntMap GrinVar) =>
+    Ref AnfVarMap (IntMap GrinVar) =>
     Ref PointerMap (SortedSet GrinVar) =>
     Maybe LazyReason ->
     PrimFn arity ->
@@ -167,7 +172,7 @@ compilePrimFn (Just lazy) fn args k = -- lazy
 
 compileExtPrim : 
     Ref NextId Int =>
-    Ref VarMap (IntMap GrinVar) =>
+    Ref AnfVarMap (IntMap GrinVar) =>
     Ref PointerMap (SortedSet GrinVar) =>
     Maybe LazyReason ->
     Name ->
@@ -178,22 +183,24 @@ compileExtPrim ret _ f args = assert_total $ idris_crash "compileExtPrim is not 
 -- TODO: Get external function expected type
 -- if primtive then unwrap else just pass it
 
+||| Hashset of functions that are partially applied.
+data PartialFns : Type where
+
 mutual
     ||| Compile an ANF expression.
     ||| Takes a continuation of what to do with the result. 
     compileANF :
         Ref NextId Int =>
-        Ref VarMap (IntMap GrinVar) =>
+        Ref AnfVarMap (IntMap GrinVar) =>
         Ref PointerMap (SortedSet GrinVar) =>
+        Ref Ctxt Defs =>
         ANF -> -- ANF expression to compile
         (GrinVar -> Core GrinExp) -> -- rest of the grin expression
         Core GrinExp
     compileANF (AV _ ANull) k = do
         ret <- nextVar
-        pure $ Bind (VVar ret) (Pure $ VTagNode erasedTag []) -- for now this is just a tag
-             !(k ret)                                         -- but I'd like it to be removed entirely
-                                                              -- I don't know if actually removing the argument
-                                                              -- will be added to `CExp` backends.
+        pure $ Bind (VVar ret) (Pure $ VTagNode erasedTag [])
+             !(k ret)
     compileANF (AV _ (ALocal ai)) k = do
         i <- getAnfVar ai -- get the GRIN variable
         ret <- nextVar
@@ -300,8 +307,9 @@ mutual
 
     compileAConAlt :
         Ref NextId Int =>
-        Ref VarMap (IntMap GrinVar) =>
+        Ref AnfVarMap (IntMap GrinVar) =>
         Ref PointerMap (SortedSet GrinVar) =>
+        Ref Ctxt Defs =>
         AConAlt ->
         (GrinVar -> Core GrinExp) -> -- rest of the grin expression
         Core GrinAlt
@@ -312,8 +320,9 @@ mutual
 
     compileAConstAlt :
         Ref NextId Int =>
-        Ref VarMap (IntMap GrinVar) =>
+        Ref AnfVarMap (IntMap GrinVar) =>
         Ref PointerMap (SortedSet GrinVar) =>
+        Ref Ctxt Defs =>
         AConstAlt ->
         (GrinVar -> Core GrinExp) -> -- rest of the grin expression
         Core GrinAlt
@@ -460,9 +469,12 @@ compileANFDef :
     Ref Eval (List (GrinVar -> Core GrinAlt)) =>
     Ref AppDefs AppInfo =>
     Ref PFInfo PrimFnInfo =>
+    Ref Ctxt Defs =>
     (Name, ANFDef) -> Core ()
 compileANFDef (name, MkAFun args exp) = do
-    varMapRef <- newRef VarMap empty
+    addFunToApp name (length args)
+    addFunToEval name (length args)
+    varMapRef <- newRef AnfVarMap empty
     pointerMapRef <- newRef PointerMap empty
     args' <- traverse (\arg => do
         arg' <- getAnfVar arg
@@ -474,9 +486,6 @@ compileANFDef (name, MkAFun args exp) = do
             args'
             !(compileANF exp \ret =>
             (pure $ Simple $ Pure $ VVar ret)))
-    let arity = length args
-    addFunToApp name arity
-    addFunToEval name arity
     update GrinDefs (def ::)
 compileANFDef (name, MkACon _ arity _) = compileCon (Fixed name) arity
 compileANFDef (name, MkAForeign ccs argTy retTy) = do -- TODO: add ffi
@@ -489,15 +498,38 @@ main = MkDef
             []
             $ Simple $ App (Fixed $ UN "__mainExpression.0") []
 
-compileANFProg : List (Name, ANFDef) -> Core GrinProg
+-- addPartialFns :
+--     Ref NextId Int =>
+--     Ref AppDefs AppInfo =>
+--     Ref Eval (List (GrinVar -> Core GrinAlt)) =>
+--     Ref PartialFns (HashSet Name) =>
+--     Ref FunArity (HashMap Name Nat) =>
+--     Core ()
+-- addPartialFns = do
+--     foldKeys (addPartialFn arityMap) (pure ()) pFns
+--   where
+--     addPartialFn : HashMap Name Nat -> Name -> Core () -> Core ()
+--     addPartialFn arityMap n act = do
+--         act
+--         let Just arity = lookup n arityMap
+--             | Nothing => throw $ InternalError $ "Missing entry for function " ++ show n ++
+--                 " in arity map, functions in map:\n" ++ show (Data.HashMap.toList arityMap)
+--         addFunToApp n arity
+--         addFunToEval n arity
+
+compileANFProg :
+    Ref Ctxt Defs =>
+    List (Name, ANFDef) ->
+    Core GrinProg
 compileANFProg defs = do
     grinDefsRef <- newRef GrinDefs []
     evalRef <- newRef Eval []
     appInfo <- newRef AppDefs $ MkAI [] [] []
     nextId <- newRef NextId 0
     primFnInfo <- newRef PFInfo $ MkPF [] []
+
     defs <- traverse compileANFDef defs
-    
+
     traverse_ (uncurry compileCon) primCons
 
     evalAlts <- get Eval
@@ -551,5 +583,7 @@ compileANFProg defs = do
     pure prog
 
 export
-anfToGrin : TransInfo Core (List (Name, ANFDef)) GrinProg
+anfToGrin :
+    Ref Ctxt Defs =>
+    TransInfo Core (List (Name, ANFDef)) GrinProg
 anfToGrin = MkTI compileANFProg
