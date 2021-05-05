@@ -4,7 +4,7 @@ BUILDDIR = ./build/exec
 IDRISGRIN = $(BUILDDIR)/$(TARGET)
 PACKAGE = idris2grin.ipkg
 
-.PHONY : self-host install run typecheck clean
+.PHONY : self-host install run typecheck clean rebuild
 
 $(IDRISGRIN) : ./src/**/*.idr $(PACKAGE)
 	$(IDRIS) --build $(PACKAGE)
@@ -26,3 +26,6 @@ typecheck :
 
 clean :
 	$(IDRIS) --clean $(PACKAGE)
+
+rebuild :
+	$(IDRIS) --build $(PACKAGE)
