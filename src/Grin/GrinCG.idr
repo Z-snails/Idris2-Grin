@@ -18,8 +18,9 @@ import Compiler.Pipeline
 import Grin.Syntax
 import Grin.AnfToGrin
 import Grin.Pretty
-import Grin.Optimisations.SimpleUnusedParameterElimination
+import Grin.Optimisations.FinalPureElimination
 import Grin.Optimisations.SimpleCopyPropogation
+import Grin.Optimisations.SimpleUnusedParameterElimination
 
 compileExpr :
     Ref Ctxt Defs ->
@@ -37,6 +38,7 @@ compileExpr d tmpDir outDir term outFile = do
         [ anfToGrin
         , liftTI Core.pure simpleUnusedParameterElimination
         , liftTI Core.pure simpleCopyPropogation
+        , liftTI Core.pure finalPureElimination
         , liftTI Core.pure prettyGrin
         ] cdata.anf
 
