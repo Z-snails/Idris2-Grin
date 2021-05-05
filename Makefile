@@ -18,6 +18,9 @@ install : $(IDRISGRIN)
 run : $(IDRISGRIN)
 	$(IDRISGRIN)
 
+run-rl : $(IDRISGRIN)
+	rlwrap $(IDRISGRIN)
+
 typecheck :
 	$(IDRIS) --typecheck $(PACKAGE)
 
