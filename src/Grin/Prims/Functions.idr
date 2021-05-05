@@ -46,10 +46,10 @@ primTagNullary tag = VTagNode (primTag tag) []
 export
 mkPrimFn :
     Ref NextId Int =>
-    (fn : String) ->
-    (binds : List String) ->
-    (prim : String) ->
-    (ret : String) ->
+    (fn : String) -> -- prim__<fn>
+    (binds : List String) -> -- constructors for arguments
+    (prim : String) -> -- _prim_<prim>
+    (ret : String) -> -- constructor for return type
     Core GrinDef
 mkPrimFn fn [] prim ret = do
     r <- nextVar
@@ -85,10 +85,10 @@ mkPrimFn fn binds prim ret = do
 export
 unaryFromTo :
     Ref NextId Int =>
-    ( String
-    , String
-    , String
-    , String
+    ( String -- function name
+    , String -- constructor for arguments
+    , String -- primitive function
+    , String -- constructor for return type
     ) ->
     Core GrinDef
 unaryFromTo (fn, from, prim, to) = mkPrimFn ("prim__" ++ fn) [from] prim to
@@ -96,19 +96,90 @@ unaryFromTo (fn, from, prim, to) = mkPrimFn ("prim__" ++ fn) [from] prim to
 export
 unary :
     Ref NextId Int =>
-    ( String
-    , String
-    , String
+    ( String -- function name
+    , String -- constructor
+    , String -- primitive function
     ) ->
     Core GrinDef
-unary (fn, bind, prim) = mkPrimFn ("prim__" ++ fn) [bind] prim bind
+unary (fn, bind, prim) = unaryFromTo (fn, bind, prim, bind)
+
+export
+binaryFromTo :
+    Ref NextId Int =>
+    ( String -- function name
+    , String -- constructor for arguments
+    , String -- primitive function
+    , String -- constructor for return type
+    ) ->
+    Core GrinDef
+binaryFromTo (fn, from, prim, to) = mkPrimFn ("prim__" ++ fn) [from, from] prim to
 
 export
 binary :
     Ref NextId Int =>
-    ( String
-    , String
-    , String
+    ( String -- function name
+    , String -- constructor
+    , String -- primitive function
     ) ->
     Core GrinDef
-binary (fn, bind, prim) = mkPrimFn ("prim__" ++ fn) [bind, bind] prim bind
+binary (fn, bind, prim) = binaryFromTo (fn, bind, prim, bind)
+
+export
+binaryBoolToInt :
+    Ref NextId Int =>
+    (fn : String) -> -- function name
+    (binds : List String) -> -- constructor for arguments
+    (prim : String) -> -- primitive function
+    (ret : String) -> -- constructor for return type
+    Core GrinDef
+binaryBoolToInt fn [] prim ret = do
+    r <- nextVar
+    pure $ MkDef
+        (Grin fn)
+        []
+        $ Bind (VVar r) (App (Grin prim) [])
+        $ Case (VVar r)
+            [ MkAlt FalsePat
+                $ Simple $ Pure $ VTagNode (primTag ret) [SLit $ LInt 0]
+            , MkAlt TruePat
+                $ Simple $ Pure $ VTagNode (primTag ret) [SLit $ LInt 1]
+            ]
+binaryBoolToInt fn binds prim ret = do
+    let ca = length binds
+    args <- replicateCore ca nextVar
+    bounds <- replicateCore ca nextVar
+    let bindings =
+            zipWith
+                (\bi, bo => VTagNode (primTag bi) [SVar bo])
+                binds
+                bounds
+    r <- nextVar
+    pure $ MkDef
+        (Grin fn)
+        args
+        $ bindArgs args bindings
+        $ Bind (VVar r) (App (Grin prim) $ bounds)
+        $ Case (VVar r)
+            [ MkAlt FalsePat
+                $ Simple $ Pure $ VTagNode (primTag ret) [SLit $ LInt 0]
+            , MkAlt TruePat
+                $ Simple $ Pure $ VTagNode (primTag ret) [SLit $ LInt 1]
+            ]
+  where
+    bindArgs : List GrinVar -> List Val -> GrinExp -> GrinExp
+    bindArgs [] _ k = k
+    bindArgs _ [] k = k
+    bindArgs (arg :: rArgs) (bind :: rBinds) k =
+        Bind bind (App (Grin "eval") [arg])
+        $ bindArgs rArgs rBinds k
+
+export
+binaryBool :
+    Ref NextId Int =>
+    ( String -- function name
+    , String -- constructor for arguments
+    , String -- primitive function
+    , String -- constructor for return type
+    ) ->
+    Core GrinDef
+binaryBool (fn, arg, prim, ret) = binaryBoolToInt ("prim__" ++ fn) [arg, arg] prim ret

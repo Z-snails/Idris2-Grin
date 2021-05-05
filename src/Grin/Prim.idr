@@ -217,17 +217,21 @@ prims = do
     unFT <- traverse unaryFromTo
         [ ("strLength", "String", "_prim_string_len", "Int")
         , ("strHead", "String", "_prim_string_head", "Int") -- Todo: change to Char when updated in grin
+        , ("crash", "String", "_prim_error", "ERROR")
         ]
     bin <- traverse binary
         [ ("add_Int", "Int", "_prim_int_add")
         , ("add_Integer", "Integer", "_prim_int_add") -- for now just an Int to get it working
         , ("sub_Integer", "Integer", "_prim_int_sub")
         , ("mul_Integer", "Integer", "_prim_int_mul")
-        , ("eq_Integer", "Integer", "_prim_int_eq")
-        , ("lt_Integer", "Integer", "_prim_int_lt")
-        , ("lte_Integer", "Integer", "_prim_int_le")
-        , ("gt_Integer", "Integer", "_prim_int_gt")
-        , ("gte_Integer", "Integer", "_prim_int_ge")
+        , ("div_Integer", "Integer", "_prim_int_div")
+        ]
+    binBoolToInt <- traverse binaryBool
+        [ ("eq_Integer", "Integer", "_prim_int_eq", "Int")
+        , ("lt_Integer", "Integer", "_prim_int_lt", "Int")
+        , ("lte_Integer", "Integer", "_prim_int_le", "Int")
+        , ("gt_Integer", "Integer", "_prim_int_gt", "Int")
+        , ("gte_Integer", "Integer", "_prim_int_ge", "Int")
         ]
     believe_me <- do
         fromTy_ <- nextVar
@@ -235,4 +239,4 @@ prims = do
         arg <- nextVar
         pure $ MkDef (Grin "prim__believe_me") [fromTy_, toTy_, arg]
              $ Simple $ Fetch arg
-    pure $ un ++ unFT ++ bin ++ [believe_me]
+    pure $ un ++ unFT ++ bin ++ binBoolToInt ++ [believe_me]
