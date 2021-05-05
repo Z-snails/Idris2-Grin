@@ -376,7 +376,7 @@ addFunToApp fn arity = traverse_ addArity [1 .. arity] -- how many are missing
                         _ => Simple $ Pure $ VTagNode tag1 (SVar <$> args ++ [arg])
         in addApps (altS, altL LLazy, altL LInf)
 
-||| Add a function to the various eval functions.
+||| Add a function to the eval function.
 addFunToEval :
     Ref Eval (List (GrinVar -> Core GrinAlt)) =>
     Ref NextId Int =>
@@ -389,8 +389,8 @@ addFunToEval fn arity =
                 _ => do
                     res <- nextVar
                     pure $ Bind (VVar res) (App (Fixed fn) args)
-                            $ Bind VUnit (Update arg (VVar res))
-                            $ Simple $ Pure $ VVar res
+                         $ Bind VUnit (Update arg (VVar res))
+                         $ Simple $ Pure $ VVar res
         evalFn : LazyReason -> GrinVar -> Core GrinAlt
         evalFn = \linf, arg => do
             args <- replicateCore arity nextVar
@@ -458,8 +458,7 @@ compileCon name arity = do
         evalAlt : GrinVar -> Core GrinAlt
         evalAlt = \argv => do
                 args <- replicateCore arity nextVar
-                pure $ MkAlt (NodePat tag args) $ Simple $ Pure $ VVar argv
-                -- if a constructor just return it no need to write it out again
+                pure $ MkAlt (NodePat tag args) $ Simple $ Pure $ VTagNode tag (SVar <$> args)
     update Eval (evalAlt ::)
 
 ||| compile an ANF definition.
