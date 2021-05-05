@@ -16,4 +16,6 @@ modules = Compiler.Pipeline
         , Grin.AnfToGrin
         , Grin.GrinCG
         , Grin.Prim
+        , Grin.Optimisations.FinalPureElimination
+        , Grin.Optimisations.SimpleCopyPropogation
         , Grin.Optimisations.SimpleUnusedParameterElimination
