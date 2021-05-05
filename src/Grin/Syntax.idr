@@ -88,6 +88,7 @@ Ord Tag where
 ||| Note there is no Bool literal because Idris removes it
 public export
 data GrinLit : Type where
+    LBool : Bool -> GrinLit
     LInt : Int -> GrinLit
     LInteger : Integer -> GrinLit
     LBits64 : Bits64 -> GrinLit
@@ -109,6 +110,7 @@ Eq GrinLit where
 -- Hopefully native Bits<n> types will be added to GRIN
 public export
 data SimpleType : Type where
+    BoolTy : SimpleType
     Int64Ty : SimpleType
     Bits64Ty : SimpleType
     DoubleTy : SimpleType
@@ -120,13 +122,14 @@ data SimpleType : Type where
 export
 simpleTypeIntTag : SimpleType -> Int
 simpleTypeIntTag = \case
-    Int64Ty => 0
-    Bits64Ty => 1
-    DoubleTy => 2
-    UnitTy => 3
-    PtrTy => 4
-    CharTy => 5
-    StringTy => 6
+    BoolTy => 0
+    Int64Ty => 1
+    Bits64Ty => 2
+    DoubleTy => 3
+    UnitTy => 4
+    PtrTy => 5
+    CharTy => 6
+    StringTy => 7
 
 export
 Eq SimpleType where
@@ -203,6 +206,14 @@ data CasePat : Type where
     TagPat : Tag -> CasePat
     LitPat : GrinLit -> CasePat
     Default : CasePat
+
+public export
+FalsePat : CasePat
+FalsePat = LitPat (LBool False)
+
+public export
+TruePat : CasePat
+TruePat = LitPat (LBool True)
 
 ||| Get the tag from a case pattern
 export

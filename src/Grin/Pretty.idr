@@ -113,6 +113,8 @@ prettyTag (MkTag{tagType, tagName}) =
 ||| Pretty print a GRIN literal.
 prettyGrinLit : GrinLit -> Builder
 prettyGrinLit = \case
+    LBool True => "#True"
+    LBool False => "#False"
     LInt i => showB i
     LInteger i => showB i
     LBits64 i => showB i <+> "u"
@@ -123,6 +125,7 @@ prettyGrinLit = \case
 ||| Pretty print a simple type.
 prettySimpleType : SimpleType -> Builder
 prettySimpleType = \case
+    BoolTy => "T_Bool"
     Int64Ty => "T_Int64"
     Bits64Ty => "T_Word64"
     DoubleTy => "T_Float"
