@@ -89,10 +89,21 @@ Ord Tag where
 public export
 data GrinLit : Type where
     LInt : Int -> GrinLit
+    LInteger : Integer -> GrinLit
     LBits64 : Bits64 -> GrinLit
     LDouble : Double -> GrinLit
     LChar : Char -> GrinLit
     LString : String -> GrinLit
+
+export
+Eq GrinLit where
+    LInt i1 == LInt i2 = i1 == i2
+    LInteger i1 == LInteger i2 = i1 == i2
+    LBits64 b1 == LBits64 b2 = b1 == b2
+    LDouble d1 == LDouble d2 = d1 == d2
+    LChar c1 == LChar c2 = c1 == c2
+    LString s1 == LString s2 = s1 == s2
+    _ == _ = False
 
 ||| Builtin GRIN type.
 -- Hopefully native Bits<n> types will be added to GRIN
@@ -106,11 +117,32 @@ data SimpleType : Type where
     CharTy : SimpleType
     StringTy : SimpleType
 
+export
+simpleTypeIntTag : SimpleType -> Int
+simpleTypeIntTag = \case
+    Int64Ty => 0
+    Bits64Ty => 1
+    DoubleTy => 2
+    UnitTy => 3
+    PtrTy => 4
+    CharTy => 5
+    StringTy => 6
+
+export
+Eq SimpleType where
+    x == y = simpleTypeIntTag x == simpleTypeIntTag y
+
 ||| GRIN type.
 public export
 data GrinType : Type where
     TyCon : GrinVar -> List GrinType -> GrinType
     TySimple : SimpleType -> GrinType
+
+export
+Eq GrinType where
+    TyCon t1 as1 == TyCon t2 as2 = t1 == t2 && as1 == as2
+    TySimple t1 == TySimple t2 = t1 == t2
+    _ == _ = False
 
 ||| A simple GRIN value.
 public export
@@ -121,6 +153,13 @@ data SimpleVal : Type where
     SVar : GrinVar -> SimpleVal
     ||| Undefined value.
     SUndefined : GrinType -> SimpleVal
+
+export
+Eq SimpleVal where
+    SLit l1 == SLit l2 = l1 == l2
+    SVar v1 == SVar v2 = v1 == v2
+    SUndefined t1 == SUndefined t2 = t1 == t2
+    _ == _ = False
 
 ||| A GRIN value.
 public export
@@ -133,6 +172,14 @@ data Val : Type where
     VSimpleVal : SimpleVal -> Val
     ||| Unit.
     VUnit : Val
+
+export
+Eq Val where
+    VTagNode t1 as1 == VTagNode t2 as2 = t1 == t2 && as1 == as2
+    VTag t1 == VTag t2 = t1 == t2
+    VSimpleVal v1 == VSimpleVal v2 = v1 == v2
+    VUnit == VUnit = True
+    _ == _ = False
 
 ||| Grin literal.
 public export
@@ -196,6 +243,15 @@ mutual
     data GrinAlt : Type where
         MkAlt : CasePat -> GrinExp -> GrinAlt
 
+export
+mapSimpleExp : (GrinExp -> GrinExp) -> SimpleExp -> SimpleExp
+mapSimpleExp f (Do exp) = Do (f exp)
+mapSimpleExp _ exp = exp
+
+export
+mapAltExp : (GrinExp -> GrinExp) -> GrinAlt -> GrinAlt
+mapAltExp f (MkAlt pat exp) = MkAlt pat (f exp)
+
 ||| Top level GRIN definition.
 public export
 data GrinDef : Type where
@@ -204,6 +260,10 @@ data GrinDef : Type where
         (args : List GrinVar) ->
         GrinExp ->
         GrinDef
+
+export
+mapGrinDef : (GrinExp -> GrinExp) -> GrinDef -> GrinDef
+mapGrinDef f (MkDef n as exp) = MkDef n as (f exp)
 
 ||| Information about an external function.
 public export
@@ -240,3 +300,7 @@ data GrinProg : Type where
         List External ->
         List GrinDef ->
         GrinProg
+
+export
+mapGrinProg : (GrinExp -> GrinExp) -> GrinProg -> GrinProg
+mapGrinProg f (MkProg exts defs) = MkProg exts (mapGrinDef f <$> defs)

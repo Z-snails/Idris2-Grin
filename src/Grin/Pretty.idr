@@ -114,6 +114,7 @@ prettyTag (MkTag{tagType, tagName}) =
 prettyGrinLit : GrinLit -> Builder
 prettyGrinLit = \case
     LInt i => showB i
+    LInteger i => showB i
     LBits64 i => showB i <+> "u"
     LDouble d => showB d
     LChar c => "#'" <+> escapedChar c <+> "'"
