@@ -8,8 +8,8 @@ sourcedir = "src"
 main = Main
 executable = idris2grin
 
-modules = Core.Instances
-        , Compiler.Pipeline
+modules = Compiler.Pipeline
+        , Core.Instances
         , Main
         , Grin.Syntax
         , Grin.Pretty
