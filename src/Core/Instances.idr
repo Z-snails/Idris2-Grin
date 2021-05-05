@@ -1,17 +1,18 @@
 module Core.Instances
 
 import Core.Core
+import Core.Name
 
-public export
+export
 Functor Core where
     map = Core.map
 
-public export
+export
 Applicative Core where
     pure = Core.pure
     (<*>) = Core.(<*>)
 
-public export
+export
 Monad Core where
     (>>=) = Core.(>>=)
     join mm = Core.(>>=) mm id
