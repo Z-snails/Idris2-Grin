@@ -40,8 +40,8 @@ primTagUnary n val = VTagNode (primTag n) [SLit val]
 
 ||| Make a 0-arity primitive Tag.
 export
-primTagNonary : String -> Val
-primTagNonary tag = VTagNode (primTag tag) []
+primTagNullary : String -> Val
+primTagNullary tag = VTagNode (primTag tag) []
 
 export
 mkPrimFn :
