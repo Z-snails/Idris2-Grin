@@ -56,12 +56,6 @@ mutual
     copyPropAlt : CopyMap -> GrinAlt -> GrinAlt
     copyPropAlt cm (MkAlt pat exp) = MkAlt pat (copyPropExp cm exp)
 
-copyPropDef : GrinDef -> GrinDef
-copyPropDef (MkDef n args exp) = MkDef n args (copyPropExp empty exp)
-
-copyPropProg : GrinProg -> GrinProg
-copyPropProg (MkProg exts defs) = MkProg exts (copyPropDef <$> defs)
-
 export
 simpleCopyPropogation : TransInfo (\x => x) GrinProg GrinProg
-simpleCopyPropogation = MkTI \prog => copyPropProg prog
+simpleCopyPropogation = MkTI $ mapGrinProg (copyPropExp empty)
