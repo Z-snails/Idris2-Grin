@@ -130,7 +130,7 @@ prettySimpleType = \case
     Bits64Ty => "T_Word64"
     DoubleTy => "T_Float"
     UnitTy => "T_Unit"
-    PtrTy => "T_Location"
+    HeapPtrTy => "T_Location"
     CharTy => "T_Char"
     StringTy => "T_String"
 
@@ -199,7 +199,7 @@ prettyGrinDef (MkDef n args exp) =
 ||| Pretty print external information.
 prettyExternal : (indent : Nat) -> External -> Builder
 prettyExternal ind ext =
-    fromString ext.name <-> foldMap (<+> " -> ") (prettyGrinType <$> ext.argTy) <+>
+    fromString ext.name <-> "::" <-> foldMap (<+> " -> ") (prettyGrinType <$> ext.argTy) <+>
     prettyGrinType ext.retTy
 
 ||| Include a Builder if a list is non-empty.
@@ -212,9 +212,9 @@ prettyProg : GrinProg -> Builder
 prettyProg (MkProg exts defs) =
     let (primPure, primEff, ffiPure, ffiEff) = splitExterns exts in
     ifCons primPure ("\nprimop pure" <+> nlSep ((indent indentSize <+> ) . prettyExternal indentSize <$> primPure)) <+>
-    ifCons primPure ("\nprimop effectful" <+> nlSep ((indent indentSize <+> ) . prettyExternal indentSize <$> primPure)) <+>
-    ifCons primPure ("\nffi pure" <+> nlSep ((indent indentSize <+> ) . prettyExternal indentSize <$> primPure)) <+>
-    ifCons primPure ("\nffi effectful" <+> nlSep ((indent indentSize <+> ) . prettyExternal indentSize <$> primPure)) <+>
+    ifCons primEff ("\nprimop effectful" <+> nlSep ((indent indentSize <+> ) . prettyExternal indentSize <$> primEff)) <+>
+    ifCons ffiPure ("\nffi pure" <+> nlSep ((indent indentSize <+> ) . prettyExternal indentSize <$> ffiPure)) <+>
+    ifCons ffiEff ("\nffi effectful" <+> nlSep ((indent indentSize <+> ) . prettyExternal indentSize <$> ffiEff)) <+>
     "\n" <+> nlSep (prettyGrinDef <$> defs)
 
 export

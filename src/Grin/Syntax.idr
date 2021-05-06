@@ -115,7 +115,7 @@ data SimpleType : Type where
     Bits64Ty : SimpleType
     DoubleTy : SimpleType
     UnitTy : SimpleType
-    PtrTy : SimpleType
+    HeapPtrTy : SimpleType
     CharTy : SimpleType
     StringTy : SimpleType
 
@@ -127,7 +127,7 @@ simpleTypeIntTag = \case
     Bits64Ty => 2
     DoubleTy => 3
     UnitTy => 4
-    PtrTy => 5
+    HeapPtrTy => 5
     CharTy => 6
     StringTy => 7
 
