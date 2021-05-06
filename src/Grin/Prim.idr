@@ -26,14 +26,14 @@ getGrinFFIType = \case
     CFString => StringTy
     CFDouble => DoubleTy
     CFChar => CharTy
-    CFPtr => PtrTy
-    CFGCPtr => PtrTy
-    CFBuffer => PtrTy
+    CFPtr => assert_total $ idris_crash "CFPtr not yet implemented"
+    CFGCPtr => assert_total $ idris_crash "CFGCPtr not yet implemented"
+    CFBuffer => assert_total $ idris_crash "CFBuffer not yet implemented"
     CFWorld => UnitTy -- Either Unit or Dead?
-    CFFun _ _ => PtrTy
+    CFFun _ _ => assert_total $ idris_crash "CFFun not yet implemented"
     CFIORes ty => getGrinFFIType ty
-    CFStruct _ _ => PtrTy
-    CFUser _ _ => PtrTy
+    CFStruct _ _ => assert_total $ idris_crash "CFStruct not yet implemented"
+    CFUser _ _ => assert_total $ idris_crash "CFUser not yet implemented"
 
 getPrimTypeName : Constant -> String
 getPrimTypeName = \case
