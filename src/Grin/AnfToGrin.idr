@@ -26,6 +26,7 @@ import Compiler.Pipeline
 import Grin.Syntax
 import Grin.Pretty
 import Grin.Prim
+import Grin.Prims.PrimOps
 
 %hide Prelude.(>>)
 %hide Prelude.(>>=)
@@ -578,7 +579,7 @@ compileANFProg defs = do
         ([main, evalFn] ++ pfi.wrapper ++ appDefs)
         ++ !prims ++ !(get GrinDefs)
 
-    let prog = MkProg pfi.externs defs
+    let prog = MkProg (pfi.externs ++ primops) defs
     pure prog
 
 export
