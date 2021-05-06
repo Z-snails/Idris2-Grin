@@ -1,0 +1,22 @@
+resolver:
+  url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/10.yaml
+
+allow-newer: true
+
+
+packages:
+- .
+
+extra-deps:
+  - monad-gen-0.3.0.1
+  - functor-infix-0.0.5
+  - QuickCheck-GenT-0.2.0
+  - set-extra-1.4.1
+  - llvm-hs-pretty-0.6.1.0
+  - system-posix-redirect-1.1.0.1
+  - llvm-hs-pure-7.0.0
+  - llvm-hs-7.0.0
+  - github: grin-compiler/grin
+    commit: 4de5a7a411a5a8d35f6159f9e0027f1583aaaa90
+    subdirs:
+      - grin

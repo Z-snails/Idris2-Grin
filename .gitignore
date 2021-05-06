@@ -1,4 +1,11 @@
+# idris
 build
+# vscode
 .vscode
+# grin
 .output
+# testing
 test.idr
+# haskell/stack
+grinIdris2/.stack-work/
+grinIdris2/*~
