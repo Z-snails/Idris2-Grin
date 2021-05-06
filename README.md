@@ -1,6 +1,5 @@
 # Idris2grin
 GRIN backend for Idris2.  
-Designed to use [this](https://github.com/grin-compiler/grin) grin compiler.
 
 This only works with recent versions of idris2 (v0.3.0 +).
 
