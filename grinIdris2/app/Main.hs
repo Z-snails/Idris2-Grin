@@ -1,4 +1,6 @@
-module Main where
+module Main (main) where
+
+import Idris2.PrimOps
 
 main :: IO ()
-main = putStrLn ""
+main = putStrLn "Hello, World!"

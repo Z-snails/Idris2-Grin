@@ -1,10 +1,13 @@
 name:                grinIdris2
 version:             0.1.0
-github:              "Z-snails/Idris2-Grin"
-license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2021 Author name here"
+# github:              "githubuser/grinIdris2"
+# license:             BSD3
+# author:              "Author name here"
+# maintainer:          "example@example.com"
+# copyright:           "2021 Author name here"
+
+extra-source-files:
+- README.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -13,50 +16,14 @@ copyright:           "2021 Author name here"
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/Z-snails/Idris2-Grin#readme>
-
-default-extensions:
-- ApplicativeDo
-- BangPatterns
-- BlockArguments
-- ConstraintKinds
-- DataKinds
-- DefaultSignatures
-- DeriveFoldable
-- DeriveFunctor
-- DeriveGeneric
-- DeriveLift
-- DeriveTraversable
-- DerivingStrategies
-- DerivingVia
-- EmptyCase
-- ExistentialQuantification
-- FlexibleContexts
-- FlexibleInstances
-- FunctionalDependencies
-- GADTs
-- GeneralizedNewtypeDeriving
-- InstanceSigs
-- KindSignatures
-- LambdaCase
-- MultiParamTypeClasses
-- MultiWayIf
-- NamedFieldPuns
-- OverloadedStrings
-- PatternSynonyms
-- PolyKinds
-- RankNTypes
-- RecordWildCards
-- ScopedTypeVariables
-- StandaloneDeriving
-- TupleSections
-- TypeApplications
-- TypeFamilies
-- TypeFamilyDependencies
-- TypeOperators
+description:         Please see the README on GitHub at <https://github.com/githubuser/grinIdris2#readme>
 
 dependencies:
 - base >= 4.7 && < 5
+- grin
+
+library:
+  source-dirs: src
 
 executables:
   grinIdris2-exe:
@@ -67,4 +34,15 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - grin
+    - grinIdris2
+
+tests:
+  grinIdris2-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - grinIdris2

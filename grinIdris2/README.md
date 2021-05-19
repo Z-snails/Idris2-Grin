@@ -1,3 +1,3 @@
 # grinIdris2
 
-Grin compiler for idris2grin compiler.
+Modified grin compiler for the Idris2 grin backend.

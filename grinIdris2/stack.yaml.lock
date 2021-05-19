@@ -19,13 +19,6 @@ packages:
   original:
     hackage: functor-infix-0.0.5
 - completed:
-    hackage: QuickCheck-GenT-0.2.0@sha256:d11b7b4a3f7648895eff66376a00f763821ee955ce42a37fb918213a8eae88d6,1458
-    pantry-tree:
-      size: 293
-      sha256: a3e3065581974edfdc6951d894d93ed134e6136caa6f5e8593a58c2e039e076b
-  original:
-    hackage: QuickCheck-GenT-0.2.0
-- completed:
     hackage: set-extra-1.4.1@sha256:c58aa620704f609f289953e7c1f9c1653fd1498f0984b0f03a3f8f38f7ed5a84,533
     pantry-tree:
       size: 268
@@ -40,43 +33,47 @@ packages:
   original:
     hackage: llvm-hs-pretty-0.6.1.0
 - completed:
-    hackage: system-posix-redirect-1.1.0.1@sha256:df83896f3567bc0e1d24f3f76f97d1d43857679b1c4f67eb303bb93b9eacd621,1354
-    pantry-tree:
-      size: 347
-      sha256: 2f6c9b912c90ee2efd32715e18827959159b484000f2f6a167df43155097aacd
-  original:
-    hackage: system-posix-redirect-1.1.0.1
-- completed:
-    hackage: llvm-hs-pure-7.0.0@sha256:054c145a345bccdad6205420832eae36e3ed4730fad9767fb153d4487d240727,2931
-    pantry-tree:
-      size: 2600
-      sha256: 11e9eb61035f203f0d037358bef49fc885d8a25045dc1080f7b6b1695c92325b
-  original:
-    hackage: llvm-hs-pure-7.0.0
-- completed:
-    hackage: llvm-hs-7.0.0@sha256:51006d5e8b7926d55a157db0f1892a5463c14781f9cf57e3b11fe17d07f457d3,8588
-    pantry-tree:
-      size: 13394
-      sha256: e7eedda9e076acf222097a449ffd08703b3298fd091065c7d5360017684d8f65
-  original:
-    hackage: llvm-hs-7.0.0
-- completed:
-    size: 11857488
+    size: 11860211
     subdir: grin
-    url: https://github.com/grin-compiler/grin/archive/4de5a7a411a5a8d35f6159f9e0027f1583aaaa90.tar.gz
+    url: https://github.com/grin-compiler/grin/archive/38aa2cd04770e43dae7ad5e82b736848ff7a81b4.tar.gz
     name: grin
     version: 0.1.0.0
-    sha256: 79ff1ce025c5332b555fde8fbac859af8e59d0a4e5f64c3b4e6459afd28e28fa
+    sha256: 632325424f3860430233ab04af7fc208b36987e54e53550e123c8259c6176192
     pantry-tree:
       size: 31684
       sha256: 824d1d0b87745bbccb465666dae80468aa794f70b28000960c3702eea555de75
   original:
     subdir: grin
-    url: https://github.com/grin-compiler/grin/archive/4de5a7a411a5a8d35f6159f9e0027f1583aaaa90.tar.gz
+    url: https://github.com/grin-compiler/grin/archive/38aa2cd04770e43dae7ad5e82b736848ff7a81b4.tar.gz
+- completed:
+    size: 9873278
+    subdir: llvm-hs
+    url: https://github.com/csabahruska/llvm-hs/archive/868e23a13942703255979369defdb49ac57b6866.tar.gz
+    name: llvm-hs
+    version: 7.1.1
+    sha256: 172a5b0476c5cc3374a1da1a53b2ac24d3268bf38a80783f9e030f4c6665c470
+    pantry-tree:
+      size: 13720
+      sha256: 42b82ae62cfc58c1cc0d237807f1d5ba7dd763dcd677a3b8db99a8fe32e3380a
+  original:
+    subdir: llvm-hs
+    url: https://github.com/csabahruska/llvm-hs/archive/868e23a13942703255979369defdb49ac57b6866.tar.gz
+- completed:
+    size: 9873278
+    subdir: llvm-hs-pure
+    url: https://github.com/csabahruska/llvm-hs/archive/868e23a13942703255979369defdb49ac57b6866.tar.gz
+    name: llvm-hs-pure
+    version: 7.0.0
+    sha256: 172a5b0476c5cc3374a1da1a53b2ac24d3268bf38a80783f9e030f4c6665c470
+    pantry-tree:
+      size: 2652
+      sha256: 79c70971c04c9cdf6fb215aa30ace60e00b54d57017ed5f72b72d10e7e22fec0
+  original:
+    subdir: llvm-hs-pure
+    url: https://github.com/csabahruska/llvm-hs/archive/868e23a13942703255979369defdb49ac57b6866.tar.gz
 snapshots:
 - completed:
-    size: 567241
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/10.yaml
-    sha256: 321b3b9f0c7f76994b39e0dabafdc76478274b4ff74cc5e43d410897a335ad3b
-  original:
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/17/10.yaml
+    size: 524804
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/16.yaml
+    sha256: 4d1519a4372d051d47a5eae2241cf3fb54e113d7475f89707ddb6ec06add2888
+  original: lts-14.16

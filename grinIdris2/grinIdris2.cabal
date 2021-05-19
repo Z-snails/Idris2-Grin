@@ -4,22 +4,36 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9008b494f00df446cea5724b284e7a1e45fc361f8fa2105942017e2ce7e65db2
+-- hash: 83bcdf7215355404d68d5238ffe4de6f1e0891ba0a2615ec70cb78f608baa2c2
 
 name:           grinIdris2
 version:        0.1.0
-description:    Please see the README on GitHub at <https://github.com/Z-snails/Idris2-Grin#readme>
-homepage:       https://github.com/Z-snails/Idris2-Grin#readme
-bug-reports:    https://github.com/Z-snails/Idris2-Grin/issues
+description:    Please see the README on GitHub at <https://github.com/githubuser/grinIdris2#readme>
+homepage:       https://github.com/githubuser/grinIdris2#readme
+bug-reports:    https://github.com/githubuser/grinIdris2/issues
 author:         Author name here
 maintainer:     example@example.com
 copyright:      2021 Author name here
 license:        BSD3
 build-type:     Simple
+extra-source-files:
+    README.md
 
 source-repository head
   type: git
-  location: https://github.com/Z-snails/Idris2-Grin
+  location: https://github.com/githubuser/grinIdris2
+
+library
+  exposed-modules:
+      Idris2.PrimOps
+  other-modules:
+      Paths_grinIdris2
+  hs-source-dirs:
+      src
+  build-depends:
+      base >=4.7 && <5
+    , grin
+  default-language: Haskell2010
 
 executable grinIdris2-exe
   main-is: Main.hs
@@ -27,9 +41,23 @@ executable grinIdris2-exe
       Paths_grinIdris2
   hs-source-dirs:
       app
-  default-extensions: ApplicativeDo BangPatterns BlockArguments ConstraintKinds DataKinds DefaultSignatures DeriveFoldable DeriveFunctor DeriveGeneric DeriveLift DeriveTraversable DerivingStrategies DerivingVia EmptyCase ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs GeneralizedNewtypeDeriving InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings PatternSynonyms PolyKinds RankNTypes RecordWildCards ScopedTypeVariables StandaloneDeriving TupleSections TypeApplications TypeFamilies TypeFamilyDependencies TypeOperators
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
     , grin
+    , grinIdris2
+  default-language: Haskell2010
+
+test-suite grinIdris2-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_grinIdris2
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , grin
+    , grinIdris2
   default-language: Haskell2010
