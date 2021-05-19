@@ -1,19 +1,12 @@
-IDRIS = idris2
-TARGET = idris2grin
-BUILDDIR = ./build/exec
-IDRISGRIN = $(BUILDDIR)/$(TARGET)
-PACKAGE = idris2grin.ipkg
+include config.mk
 
-.PHONY : self-host install run typecheck clean rebuild
+.PHONY : self-host install run typecheck clean build grin install-grin
 
 $(IDRISGRIN) : ./src/**/*.idr $(PACKAGE)
 	$(IDRIS) --build $(PACKAGE)
 
 self-host : ./src/**/*.idr $(PACKAGE) $(IDRISGRIN)
 	$(IDRISGRIN) --build $(PACKAGE)
-
-install : $(IDRISGRIN)
-	$(IDRIS) --install $(PACKAGE)
 
 run : $(IDRISGRIN)
 	$(IDRISGRIN)
@@ -26,6 +19,18 @@ typecheck :
 
 clean :
 	$(IDRIS) --clean $(PACKAGE)
+	$(MAKE) -C grin clean
 
-rebuild :
+build :
 	$(IDRIS) --build $(PACKAGE)
+
+build-grinpkg :
+	$(MAKE) -C grin build
+
+install-grinpkg :
+	$(MAKE) -C grin install
+
+grinpkg : build-grinpkg install-grinpkg
+
+sep :
+	$(IDRIS) --build $(PACKAGE) --cg chez-sep
