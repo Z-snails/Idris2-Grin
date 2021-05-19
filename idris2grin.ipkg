@@ -1,6 +1,6 @@
 package grin
 
-depends = idris2, network, contrib
+depends = idris2, network, contrib, grin == 0.1.0
 
 version = 0.1.0
 
@@ -8,17 +8,8 @@ sourcedir = "src"
 main = Main
 executable = idris2grin
 
-modules = Compiler.Pipeline
-        , Core.Instances
+modules = GRIN.ANFToGRIN
+        , GRIN.Data
+        , GRIN.GrinCG
+        , GRIN.PrimOps
         , Main
-        , Grin.Syntax
-        , Grin.Pretty
-        , Grin.AnfToGrin
-        , Grin.GrinCG
-        , Grin.Prim
-        , Grin.Prims.Constructors
-        , Grin.Prims.Functions
-        , Grin.Prims.PrimOps
-        , Grin.Optimisations.FinalPureElimination
-        , Grin.Optimisations.SimpleCopyPropogation
-        , Grin.Optimisations.SimpleUnusedParameterElimination

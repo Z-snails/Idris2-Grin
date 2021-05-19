@@ -1,0 +1,58 @@
+package grin
+version = 0.1.0
+authors = "Zoe Stafford"
+-- maintainers =
+-- license =
+-- brief =
+-- readme =
+-- homepage =
+-- sourceloc =
+-- bugtracker =
+
+-- packages to add to search path
+depends = contrib
+
+-- modules to install
+modules = Data.String.Builder
+        , Data.String.Utils
+        , GRIN.AST
+        , GRIN.Analysis
+        , GRIN.Analysis.CallGraph
+        , GRIN.GrinM
+        , GRIN.Opts.CaseSimplify
+        , GRIN.Opts.CopyPropogation
+        , GRIN.Opts.NormaliseBind
+        , GRIN.Opts.UnusedConstructorElim
+        , GRIN.Opts.UnusedFunctionElim
+        , GRIN.Opts.UnusedParameterElim
+        , GRIN.Parser
+        , GRIN.Pipeline
+        , GRIN.Pretty
+        , GRIN.PrettyCompat
+        , GRIN.PrettyCompatB
+        , GRIN.Name
+        , GRIN.ToLLVM
+        , LLVM.AST
+        , LLVM.Pretty
+
+sourcedir = "src"
+-- builddir =
+-- outputdir =
+
+-- script to run before building
+-- prebuild =
+
+-- script to run after building
+-- postbuild =
+
+-- script to run after building, before installing
+-- preinstall =
+
+-- script to run after installing
+-- postinstall =
+
+-- script to run before cleaning
+-- preclean =
+
+-- script to run after cleaning
+-- postclean =
