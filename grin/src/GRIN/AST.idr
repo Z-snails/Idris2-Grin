@@ -111,12 +111,18 @@ StoreId = Int
 ||| A simple type.
 public export
 data SType : Type where
-    IntType : IntPrec -> SType
+    IntTy : IntPrec -> SType
+    DoubleTy : SType
+    CharTy : SType
+    StringTy : SType
     HeapPtr : StoreId -> SType
 
 export
 Eq SType where
-    IntType x == IntType y = x == y
+    IntTy x == IntTy y = x == y
+    DoubleTy == DoubleTy = True
+    CharTy == CharTy = True
+    StringTy == StringTy = True
     HeapPtr x == HeapPtr y = x == y
     _ == _ = False
 
@@ -124,6 +130,7 @@ Eq SType where
 public export
 data GType : (name : Type) -> Type where
     SimpleType : SType -> GType name
+    TyVar : name -> GType name
     Cons : GType name -- TODO: HPT
 
 Eq name => Eq (GType name) where
@@ -134,19 +141,24 @@ Eq name => Eq (GType name) where
 export
 Functor GType where
     map _ (SimpleType ty) = SimpleType ty
+    map f (TyVar x) = TyVar (f x)
     map _ Cons = Cons
 
 export
 Foldable GType where
     foldl f z Cons = z
-    foldl _ z (SimpleType _) = z
+    foldl f z (TyVar x) = f z x
+    foldl _ z _ = z
 
-    foldr f z = foldl (flip f) z
+    foldr f z Cons = z
+    foldr f z (TyVar x) = f x z
+    foldr _ z _ = z
 
 export
 Traversable GType where
-    traverse f Cons = pure Cons
     traverse _ (SimpleType ty) = pure (SimpleType ty)
+    traverse f (TyVar x) = TyVar <$> f x
+    traverse f Cons = pure Cons
 
 ||| A type of a function.
 public export

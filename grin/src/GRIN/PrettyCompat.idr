@@ -51,12 +51,16 @@ Show IntPrec where
 
 export
 Show SType where
-    show (IntType prec) = show prec
+    show (IntTy prec) = show prec
+    show DoubleTy = "T_Float"
+    show CharTy = "T_Char"
+    show StringTy = "T_String"
     show (HeapPtr i) = "T_Location" ++ show i
 
 export
 Show name => Show (GType name) where
     show (SimpleType ty) = show ty
+    show (TyVar x) = "%" ++ show x
     show Cons = "Constructor"
 
 export

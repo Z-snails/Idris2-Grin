@@ -54,12 +54,16 @@ ShowB IntPrec where
 
 export
 ShowB SType where
-    showB (IntType prec) = showB prec
+    showB (IntTy prec) = showB prec
+    showB DoubleTy = "T_Float"
+    showB CharTy = "T_Char"
+    showB StringTy = "T_String"
     showB (HeapPtr i) = "T_Location" <+> showB @{FromShow} i
 
 export
 Show name => ShowB (GType name) where
     showB (SimpleType ty) = showB ty
+    showB (TyVar x) = "%" <+> showB @{FromShow} x
     showB Cons = "Constructor"
 
 export
