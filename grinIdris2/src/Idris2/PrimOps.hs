@@ -11,6 +11,7 @@ idris2PrimOps = [progConst|
 
 ffi pure
     _prim_add_Integer :: %Integer -> %Integer -> %Integer
+    _prim_sub_Integer :: %Integer -> %Integer -> %Integer
 
 primop pure
     _prim_add_Int :: T_Int64 -> T_Int64 -> T_Int64

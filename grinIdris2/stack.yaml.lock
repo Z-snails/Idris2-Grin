@@ -5,26 +5,12 @@
 
 packages:
 - completed:
-    hackage: monad-gen-0.3.0.1@sha256:a2569465cfbd468d3350ef25de56b3362580e77537224313aab1210f40804a3b,821
-    pantry-tree:
-      size: 288
-      sha256: a825dc8dcc3ee27dbbc1b71f6853703790ed320249b8f8510bb36d726664e795
-  original:
-    hackage: monad-gen-0.3.0.1
-- completed:
     hackage: functor-infix-0.0.5@sha256:cea21a321031f556d7a21b51e049493e7cb78baf64dd63f0d1a36de01c4c735b,661
     pantry-tree:
       size: 367
       sha256: 04de43014229a582ba4aeff75a3e065cdba4d550a05af36a459fa38b685640b7
   original:
-    hackage: functor-infix-0.0.5
-- completed:
-    hackage: set-extra-1.4.1@sha256:c58aa620704f609f289953e7c1f9c1653fd1498f0984b0f03a3f8f38f7ed5a84,533
-    pantry-tree:
-      size: 268
-      sha256: 3b6f94160b9d868f341d841de0e3e9f354ae90b5817b171e2bb68fd67cf2790c
-  original:
-    hackage: set-extra-1.4.1
+    hackage: functor-infix-0.0.5@sha256:cea21a321031f556d7a21b51e049493e7cb78baf64dd63f0d1a36de01c4c735b,661
 - completed:
     hackage: llvm-hs-pretty-0.6.1.0@sha256:54785b205bc9a267513b539eb8073f9f576e01da196720871bc894520e712e16,1670
     pantry-tree:
@@ -32,6 +18,20 @@ packages:
       sha256: 09128cc6ff572c3c544de01ee2b683cdc356d606a5829f1c60966593ff2f59db
   original:
     hackage: llvm-hs-pretty-0.6.1.0
+- completed:
+    hackage: monad-gen-0.3.0.1@sha256:a2569465cfbd468d3350ef25de56b3362580e77537224313aab1210f40804a3b,821
+    pantry-tree:
+      size: 288
+      sha256: a825dc8dcc3ee27dbbc1b71f6853703790ed320249b8f8510bb36d726664e795
+  original:
+    hackage: monad-gen-0.3.0.1@sha256:a2569465cfbd468d3350ef25de56b3362580e77537224313aab1210f40804a3b,821
+- completed:
+    hackage: set-extra-1.4.1@sha256:c58aa620704f609f289953e7c1f9c1653fd1498f0984b0f03a3f8f38f7ed5a84,533
+    pantry-tree:
+      size: 268
+      sha256: 3b6f94160b9d868f341d841de0e3e9f354ae90b5817b171e2bb68fd67cf2790c
+  original:
+    hackage: set-extra-1.4.1@sha256:c58aa620704f609f289953e7c1f9c1653fd1498f0984b0f03a3f8f38f7ed5a84,533
 - completed:
     size: 11860211
     subdir: grin

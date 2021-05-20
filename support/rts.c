@@ -11,7 +11,7 @@ void __runtime_error(int64_t code) {
 
 int main() {
     int64_t* heap = malloc(100*1024*1024);
-    _heat_ptr = heap
+    _heat_ptr = heap;
     grinMain();
     free(heap);
     return 0;

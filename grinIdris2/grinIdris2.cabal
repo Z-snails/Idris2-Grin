@@ -4,24 +4,14 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 83bcdf7215355404d68d5238ffe4de6f1e0891ba0a2615ec70cb78f608baa2c2
+-- hash: c66c54df75fbb8fdac557cdb943210b989856d28e2bf06d92e6c5f0f4fcbf7a3
 
 name:           grinIdris2
 version:        0.1.0
 description:    Please see the README on GitHub at <https://github.com/githubuser/grinIdris2#readme>
-homepage:       https://github.com/githubuser/grinIdris2#readme
-bug-reports:    https://github.com/githubuser/grinIdris2/issues
-author:         Author name here
-maintainer:     example@example.com
-copyright:      2021 Author name here
-license:        BSD3
 build-type:     Simple
 extra-source-files:
     README.md
-
-source-repository head
-  type: git
-  location: https://github.com/githubuser/grinIdris2
 
 library
   exposed-modules:
