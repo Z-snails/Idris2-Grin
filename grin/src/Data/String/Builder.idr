@@ -87,3 +87,7 @@ function f args = showB f <+> foldMap (\arg => " " <+> showB arg) args
 export
 nlSep : ShowB a => Foldable t => t a -> Builder
 nlSep xs = foldMap (\x => showB x <+> "\n\n") xs
+
+export
+nl1Sep : ShowB a => Foldable t => t a -> Builder
+nl1Sep xs = foldMap (\x => "\n" <+> showB x) xs <+> "\n"
