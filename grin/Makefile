@@ -1,6 +1,6 @@
 include ../config.mk
 
-.PHONY : grin
+.PHONY : build install clean
 
 build :
 	$(IDRIS) --build grin.ipkg

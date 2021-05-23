@@ -1,6 +1,6 @@
 include config.mk
 
-.PHONY : self-host install run typecheck clean build grin install-grin
+.PHONY : self-host install run typecheck clean build grin install-grin grinIdris2
 
 $(IDRISGRIN) : ./src/**/*.idr $(PACKAGE)
 	$(IDRIS) --build $(PACKAGE)
@@ -34,3 +34,6 @@ grinpkg : build-grinpkg install-grinpkg
 
 sep :
 	$(IDRIS) --build $(PACKAGE) --cg chez-sep
+
+grinIdris2 :
+	$(MAKE) -C grinIdris2 install
