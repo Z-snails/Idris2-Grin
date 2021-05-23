@@ -4,6 +4,8 @@ import Data.Vect
 import Data.SortedSet
 import Libraries.Data.IntMap
 
+import Compiler.Common
+import Core.CompileExpr
 import Core.Core
 import Core.TT
 
@@ -140,6 +142,7 @@ data GrinFn
     | Eval
     | Main
     | Null
+    | PtrVar
 
 export
 Show GrinFn where
@@ -150,6 +153,7 @@ Show GrinFn where
     show Eval = "eval"
     show Main = "grinMain"
     show Null = "Null"
+    show PtrVar = "Ptr"
 
 %inline
 grinFnTag : GrinFn -> Int
@@ -161,6 +165,7 @@ grinFnTag = \case
     Eval => 4
     Main => 5
     Null => 6
+    PtrVar => 7
 
 export
 Eq GrinFn where
@@ -173,6 +178,7 @@ Ord GrinFn where
 public export
 data GName : Type where
     IdrName : Name -> GName
+    FFIName : String -> GName
     GrinName : GrinFn -> GName
     PrimName : PrimFn arity -> GName
     PrimFunc : PrimFn arity -> GName
@@ -196,6 +202,7 @@ Show GName where
         showFull (CaseBlock str i) = fastConcat ["cb_", str, show i]
         showFull (WithBlock str i) = fastConcat ["wb_", str, show i]
         showFull (Resolved i) = "$" ++ show i
+    show (FFIName fn) = fn
     show (GrinName fn) = show fn
     show (PrimName op) = quote $ show op
     show (PrimFunc op) = "_prim_" ++ showPrimFn op
@@ -276,6 +283,7 @@ Show GName where
 export
 Eq GName where
     IdrName n == IdrName m = n == m
+    FFIName n == FFIName m = n == m
     GrinName n == GrinName m = n == m
     PrimName o == PrimName p = cmpPrimFn o p == EQ
     PrimFunc o == PrimFunc p = cmpPrimFn o p == EQ
@@ -285,6 +293,7 @@ Eq GName where
 export
 Ord GName where
     IdrName n `compare` IdrName m = n `compare` m
+    FFIName n `compare` FFIName m = n `compare` m
     GrinName n `compare` GrinName m = n `compare` m
     PrimName n `compare` PrimName m = n `cmpPrimFn` m
     PrimFunc n `compare` PrimFunc m = n `cmpPrimFn` m
@@ -293,10 +302,11 @@ Ord GName where
       where
         tag : GName -> Int
         tag (IdrName _) = 0
-        tag (GrinName _) = 1
-        tag (PrimName _) = 2
-        tag (PrimFunc _) = 3
-        tag (ConstName _) = 4
+        tag (FFIName _) = 1
+        tag (GrinName _) = 2
+        tag (PrimName _) = 3
+        tag (PrimFunc _) = 4
+        tag (ConstName _) = 5
 
 public export data AVars : Type where
 public export data Ptrs : Type where
@@ -399,3 +409,53 @@ wrapConstant v = constant
     (\c, _ => ConstTagNode (MkTag Con (ConstName c)) [SVar v])
     (\c, _ => ConstTagNode (MkTag Con (ConstName c)) [SVar v])
     (\c => ConstTagNode (MkTag Con (ConstName c)) [])
+
+export
+getCFType : CFType -> Maybe (GType GName)
+getCFType = \case
+    CFUnit => Just $ SimpleType UnitTy
+    CFInt => Just $ SimpleType $ IntTy $ Signed 64
+    CFUnsigned8 => Just $ SimpleType $ IntTy $ Unsigned 8
+    CFUnsigned16 => Just $ SimpleType $ IntTy $ Unsigned 16
+    CFUnsigned32 => Just $ SimpleType $ IntTy $ Unsigned 32
+    CFUnsigned64 => Just $ SimpleType $ IntTy $ Unsigned 64
+    CFString => Just $ SimpleType StringTy
+    CFDouble => Just $ SimpleType DoubleTy
+    CFChar => Just $ SimpleType CharTy
+    CFPtr => Just $ TyVar $ GrinName PtrVar
+    CFGCPtr => Just $ TyVar $ GrinName PtrVar
+    CFBuffer => Just $ TyVar $ GrinName PtrVar
+    CFWorld => Just $ TyVar $ GrinName PtrVar
+    CFFun _ _ => Nothing
+    CFIORes ty => assert_total $ getCFType ty
+    CFStruct _ _ => Nothing
+    CFUser _ _ => Nothing
+
+export
+getFFIType : List CFType -> CFType -> Either String (Nat, FuncType GName)
+getFFIType args ret = do
+    (ar, argsTy) <- getCFTypes args
+    pure (ar, MkFuncType argsTy !(getCFTypeEither ret))
+  where
+    getCFTypeEither : CFType -> Either String (GType GName)
+    getCFTypeEither ty = case getCFType ty of
+        Just ty' => Right ty'
+        Nothing => Left $ assert_total $ show ty
+
+    getCFTypes : List CFType -> Either String (Nat, List (GType GName))
+    getCFTypes [] = Right (0, [])
+    getCFTypes (CFWorld :: tys) = getCFTypes tys
+    getCFTypes (ty :: tys) = do
+        ty' <- getCFTypeEither ty
+        bimap S (ty' ::) <$> getCFTypes tys
+
+export
+isEff : CFType -> Effectful
+isEff (CFIORes _) = Effect
+isEff _ = NoEffect
+
+export
+getCC : List String -> Maybe String
+getCC ccs = case parseCC ["C"] ccs of
+    Just (_, (fn :: _)) => Just fn
+    _ => Nothing

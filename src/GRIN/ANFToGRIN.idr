@@ -292,6 +292,12 @@ addDef :
     Core ()
 addDef def = update Build $ record { defs $= (def ::) }
 
+addExtern :
+    Ref Build BProg =>
+    Extern GName ->
+    Core ()
+addExtern ext = update Build $ record { externs $= (ext ::) }
+
 addFnEval :
     Ref NextVar Var =>
     Ref Build BProg =>
@@ -388,7 +394,17 @@ anfDef con (MkACon _ ar _) =
         let tag = (MkTag Con (IdrName con))
         pure $ MkAlt (NodePat tag vs) (mkSimpleExp $ Pure $ ConstTagNode tag (SVar <$> vs))
 
-anfDef fn (MkAForeign ccs args ret) = pure ()
+anfDef fn (MkAForeign ccs args ret) = do
+    let Just primFn = getCC ccs
+        | Nothing => throw $ InternalError $ "No supported calling conventions."
+    let Right (ar, type) = getFFIType args ret
+        | Left err => throw $ InternalError $ "Unsupported ffi type " ++ err ++ "."
+    let prim = FFI
+    let eff = isEff ret
+    addExtern $ MkExtern { extName = FFIName primFn, type, prim, eff }
+    vs <- replicate ar newVar
+    wrap <- mkFFIWrapper args ret (FFIName primFn) vs
+    addDef $ mkDef (IdrName fn) vs wrap
 
 anfDef fn e@(MkAError exp) = anfDef fn (assert_smaller e $ MkAFun [] exp)
 
