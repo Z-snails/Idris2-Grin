@@ -8,8 +8,8 @@ data Var : Type where
     MkVar : Int -> Var
 
 export
-nextVar : Var -> Var
-nextVar (MkVar i) = (MkVar (i + 1))
+incVar : Var -> Var
+incVar (MkVar x) = MkVar (x + 1)
 
 export
 Eq Var where
@@ -95,12 +95,12 @@ Eq Lit where
 public export
 data IntPrec : Type where
     Signed : Nat -> IntPrec
-    UnSigned : Nat -> IntPrec
+    Unsigned : Nat -> IntPrec
 
 export
 Eq IntPrec where
     Signed x == Signed y = x == y
-    UnSigned x == UnSigned y = x == y
+    Unsigned x == Unsigned y = x == y
     _ == _ = False
 
 ||| Id of the store instuction a `HeapPtr` came from
@@ -115,6 +115,7 @@ data SType : Type where
     DoubleTy : SType
     CharTy : SType
     StringTy : SType
+    UnitTy : SType
     HeapPtr : StoreId -> SType
 
 export
@@ -123,6 +124,7 @@ Eq SType where
     DoubleTy == DoubleTy = True
     CharTy == CharTy = True
     StringTy == StringTy = True
+    UnitTy == UnitTy = True
     HeapPtr x == HeapPtr y = x == y
     _ == _ = False
 
