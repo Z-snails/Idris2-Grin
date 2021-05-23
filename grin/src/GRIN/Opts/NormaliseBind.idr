@@ -7,7 +7,7 @@ mutual
     normaliseExp : Exp name -> Exp name
     normaliseExp (SimpleExp (Do e)) = normaliseExp e
     normaliseExp e@(SimpleExp _) = e
-    normaliseExp (Bind val (Do e) rest) = bind val e rest
+    normaliseExp (Bind val (Do e) rest) = bind val e (normaliseExp rest)
     normaliseExp (Bind val e rest) = Bind val e $ normaliseExp rest
     normaliseExp (Case val alts) = Case val $ mapExpAlt normaliseExp <$> alts
 
