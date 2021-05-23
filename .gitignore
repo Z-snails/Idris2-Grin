@@ -8,6 +8,7 @@ build
 .output
 # testing
 test.idr
+test.grin
 # haskell/stack
 grinIdris2/.stack-work/
 grinIdris2/*~
