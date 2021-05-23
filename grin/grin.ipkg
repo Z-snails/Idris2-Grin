@@ -16,11 +16,14 @@ depends = contrib
 modules = Data.String.Builder
         , Data.String.Utils
         , GRIN.AST
-        , GRIN.Analysis
         , GRIN.Analysis.CallGraph
+        , GRIN.Analysis.MaxVar
+        , GRIN.Error
+        , GRIN.GrinState
         , GRIN.GrinM
         , GRIN.Opts.CaseSimplify
         , GRIN.Opts.CopyPropogation
+        , GRIN.Opts.Inline
         , GRIN.Opts.NormaliseBind
         , GRIN.Opts.UnusedConstructorElim
         , GRIN.Opts.UnusedFunctionElim
@@ -32,6 +35,7 @@ modules = Data.String.Builder
         , GRIN.PrettyCompatB
         , GRIN.Name
         , GRIN.ToLLVM
+        , GRIN.Var
         , LLVM.AST
         , LLVM.Pretty
 
