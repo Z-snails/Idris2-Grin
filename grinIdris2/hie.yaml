@@ -1,0 +1,13 @@
+cradle:
+  stack:
+    - path: "./src"
+      component: "grinIdris2:lib"
+
+    - path: "./app/Main.hs"
+      component: "grinIdris2:exe:grinIdris2-exe"
+
+    - path: "./app/Paths_grinIdris2.hs"
+      component: "grinIdris2:exe:grinIdris2-exe"
+
+    - path: "./test"
+      component: "grinIdris2:test:grinIdris2-test"

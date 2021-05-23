@@ -1,10 +1,8 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: c66c54df75fbb8fdac557cdb943210b989856d28e2bf06d92e6c5f0f4fcbf7a3
 
 name:           grinIdris2
 version:        0.1.0
@@ -15,14 +13,20 @@ extra-source-files:
 
 library
   exposed-modules:
+      Idris2.EvalPrimOp
       Idris2.PrimOps
   other-modules:
       Paths_grinIdris2
   hs-source-dirs:
       src
+  default-extensions:
+      OverloadedStrings
   build-depends:
       base >=4.7 && <5
+    , filepath
     , grin
+    , megaparsec ==7.*
+    , text
   default-language: Haskell2010
 
 executable grinIdris2-exe
@@ -31,11 +35,16 @@ executable grinIdris2-exe
       Paths_grinIdris2
   hs-source-dirs:
       app
+  default-extensions:
+      OverloadedStrings
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , filepath
     , grin
     , grinIdris2
+    , megaparsec ==7.*
+    , text
   default-language: Haskell2010
 
 test-suite grinIdris2-test
@@ -45,9 +54,14 @@ test-suite grinIdris2-test
       Paths_grinIdris2
   hs-source-dirs:
       test
+  default-extensions:
+      OverloadedStrings
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , filepath
     , grin
     , grinIdris2
+    , megaparsec ==7.*
+    , text
   default-language: Haskell2010
