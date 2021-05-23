@@ -5,7 +5,7 @@ import Data.SortedMap as Map
 import Data.SortedSet as Set
 
 import GRIN.AST
-import GRIN.Analysis
+import GRIN.GrinState
 
 callsSExp : SExp name -> SortedSet name -> SortedSet name
 callsExp : Exp name -> SortedSet name -> SortedSet name
@@ -19,21 +19,29 @@ callsExp (Bind _ rhs rest) m = callsExp rest $ callsSExp rhs m
 callsExp (Case _ alts) m = foldr (callsExp . altExp) m alts
 
 ||| Get the call graph for all functions called by `def`.
-callGraphDef : Ord name => SortedMap name (Def name) -> (fn : name) -> CallGraph name -> CallGraph name
-callGraphDef defs fn cg = case lookup fn cg of
+callGraphDef :
+    Ord name =>
+    SortedMap name (Extern name) ->
+    SortedMap name (Def name) ->
+    (fn : name) ->
+    CallGraph name ->
+    CallGraph name
+callGraphDef exts defs fn cg = case lookup fn cg of
     Nothing => case lookup fn defs of
         Just (MkDef _ _ exp _) =>
             let calls = callsExp exp empty
-            in foldr (callGraphDef defs) (insert fn calls cg) calls
-        Nothing => cg
+            in foldr (callGraphDef exts defs) (insert fn calls cg) calls
+        Nothing => case lookup fn exts of
+            Just _ => insert fn empty cg
+            Nothing => cg
     Just _ => cg
 
 ||| Get the call graph for all functions (transitively) called by main
 export
 callsGraph : Ord name => Prog name -> CallGraph name
-callsGraph (MkProg _ defs main) = case lookup main defs of
+callsGraph (MkProg exts defs main) = case lookup main defs of
     Nothing => empty
-    Just (MkDef fn _ _ _) => callGraphDef defs fn empty
+    Just (MkDef fn _ _ _) => callGraphDef exts defs fn empty
 
 export
 calledByGraph : Ord name => CallGraph name -> CallGraph name
