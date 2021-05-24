@@ -52,7 +52,7 @@ pLit = choice
 pIntPrec : Parser IntPrec
 pIntPrec = optional (string "T_") *> choice
     [ Signed <$ string "Int" <*> natural
-    , UnSigned <$ string "Word" <*> natural
+    , Unsigned <$ string "Word" <*> natural
     ]
 
 

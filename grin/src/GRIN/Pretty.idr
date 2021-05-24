@@ -46,7 +46,7 @@ Show Lit where
 
 Show IntPrec where
     show (Signed n) = "Int" <+> show n
-    show (UnSigned n) = "Word" <+> show n
+    show (Unsigned n) = "Word" <+> show n
 
 export
 Show SType where
@@ -54,6 +54,7 @@ Show SType where
     show DoubleTy = "Double"
     show CharTy = "Char"
     show StringTy = "String"
+    show UnitTy = "Unit"
     show (HeapPtr i) = "Location" <+> show i
 
 export
