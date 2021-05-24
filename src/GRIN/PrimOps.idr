@@ -2,11 +2,14 @@ module GRIN.PrimOps
 
 import Data.Vect
 
+import Core.CompileExpr
 import Core.Core
 import Core.TT
 
 import GRIN.AST
 import GRIN.Data
+
+%default total
 
 bindArgs :
     Ref NextVar Var =>
@@ -60,6 +63,13 @@ bits64Tag = mkConstTag $ B64 0
 integerTag : Tag GName
 integerTag = mkConstTag $ BI 0
 
+stringTag : Tag GName
+stringTag = mkConstTag $ Str ""
+charTag : Tag GName
+charTag = mkConstTag $ Ch '\0'
+doubleTag : Tag GName
+doubleTag = mkConstTag $ Db 0.0
+
 intTags : List (Constant, Tag GName)
 intTags =
     [ (IntType, intTag)
@@ -68,12 +78,25 @@ intTags =
     , (IntegerType, integerTag)
     ]
 
+concatTraverse : (a -> Core (List b)) -> List a -> Core (List b)
+concatTraverse f = map concat . traverse f
+
+concatCore : List (Core (List a)) -> Core (List a)
+concatCore [] = pure []
+concatCore (xs :: xss) = [| xs ++ concatCore xss |]
+
 export
 primOps : Ref NextVar Var => Core (List (Def GName))
-primOps = concat <$> traverse mkBinOps intTags
+primOps = concatCore
+    [ concatTraverse mkBinOps intTags
+    , concatTraverse mkCmpOps intTags
+    ]
   where
     mkBinOps : (Constant, Tag GName) -> Core (List (Def GName))
-    mkBinOps (ty, tag) = traverse (\fn => primOp [tag, tag] fn tag) [Add ty, Sub ty, Mul ty]
+    mkBinOps (ty, tag) = traverse (\fn => primOp [tag, tag] fn tag) [Add ty, Sub ty, Mul ty, Div ty]
+
+    mkCmpOps : (Constant, Tag GName) -> Core (List (Def GName))
+    mkCmpOps (ty, tag) = traverse (\fn => primOp [tag, tag] fn intTag) [LT ty, LTE ty, EQ ty, GTE ty, GT ty]
 
 export
 externs : List (Extern GName)
@@ -98,3 +121,57 @@ primCons _ = traverse mkPrimAlt cons
     mkPrimAlt c = do
         v <- newVar
         pure $ MkAlt (getConstantNodePat v c) $ SimpleExp $ Pure $ wrapConstant v c
+
+getCFTypeCon : CFType -> Maybe (Maybe (Tag GName))
+getCFTypeCon = \case
+    CFUnit => Just Nothing
+    CFInt => just2 intTag
+    CFUnsigned8 => just2 bits8Tag
+    CFUnsigned16 => just2 bits16Tag
+    CFUnsigned32 => just2 bits32Tag
+    CFUnsigned64 => just2 bits64Tag
+    CFString => just2 stringTag
+    CFDouble => just2 doubleTag
+    CFChar => just2 charTag
+    CFPtr => just2 $ MkTag Con $ GrinName PtrVar
+    CFGCPtr => just2 $ MkTag Con $ GrinName PtrVar
+    CFBuffer => just2 $ MkTag Con $ GrinName PtrVar
+    CFWorld => just2 $ MkTag Con $ GrinName PtrVar
+    CFFun _ _ => Nothing
+    CFIORes ty => assert_total $ getCFTypeCon ty
+    CFStruct _ _ => Nothing
+    CFUser _ _ => Nothing
+  where
+    just2 : a -> Maybe (Maybe a)
+    just2 = Just . Just
+
+getCFTypeCons : List CFType -> Maybe (arity ** Vect arity (Tag GName))
+getCFTypeCons [] = Just (_ ** [])
+getCFTypeCons (CFWorld :: args) = getCFTypeCons args
+getCFTypeCons (arg :: args) = case getCFTypeCon arg of
+    Nothing => Nothing
+    Just Nothing => Nothing -- CFUnit can't be an argument
+    Just (Just tag) => case getCFTypeCons args of
+        Nothing => Nothing
+        Just (_ ** tags) => Just (_ ** tag :: tags)
+
+export
+mkFFIWrapper :
+    Ref NextVar Var =>
+    List CFType ->
+    CFType ->
+    GName -> -- primitive function
+    List Var ->
+    Core (Exp GName)
+mkFFIWrapper args ret op vs = do
+    let Just (ar ** argCons) = getCFTypeCons args
+        | Nothing => throw $ InternalError "Unsupported type in ffi."
+    let Just retCon = getCFTypeCon ret
+        | Nothing => throw $ InternalError "Unsupported type in ffi."
+    ret <- newVar
+    bindArgs argCons vs $ \vs' =>
+        case retCon of
+            Nothing => pure $ SimpleExp $ App op vs'
+            Just retCon' =>
+                pure $ Bind (VVar ret) (App op vs')
+                     $ SimpleExp $ Pure $ ConstTagNode retCon' [SVar ret]
