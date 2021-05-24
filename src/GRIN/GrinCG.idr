@@ -5,6 +5,7 @@ import Core.Context
 import Core.Context.Log
 import Core.Directory
 import Core.Options
+import Core.Options.Log
 import Compiler.Common
 
 import Data.String.Builder
@@ -19,6 +20,7 @@ import System.Directory
 import GRIN.ANFToGRIN
 import GRIN.AST
 import GRIN.Data
+import GRIN.Error
 import GRIN.PrettyCompatB
 import GRIN.Pipeline
 import GRIN.Name
@@ -28,26 +30,47 @@ getSaveIR : List String -> Bool
 getSaveIR [] = False
 getSaveIR (d :: ds) = trim d == "save-ir" || getSaveIR ds
 
+getDoOpts : List String -> Bool
+getDoOpts [] = True
+getDoOpts (d :: ds) = trim d /= "no-opts" && getDoOpts ds
+
+getSkipCG : List String -> Bool
+getSkipCG [] = False
+getSkipCG (d :: ds) = trim d == "skip-cg" || getSkipCG ds
+
+getDoStats : List String -> Bool
+getDoStats [] = False
+getDoStats (d :: ds) = trim d == "stats" || getDoStats ds
+
 ShowB GName where
     showB = showB @{FromShow}
 
+data PostPipeline
+    = Eval
+    | EvalWithStats
+    | SaveLLVM
+
 compileExpr :
+    PostPipeline ->
     Ref Ctxt Defs ->
     (tmpDir : String) ->
     (outDir : String) ->
     ClosedTerm ->
     (outFile : String) ->
     Core (Maybe String)
-compileExpr d tmpDir outDir term outFile = do
-    let tmpDir = outDir </> (outFile ++ "_app")
-    let outGrinFile = outDir </> outFile <.> "grin"
-    let mkGrinFile = \file => tmpDir </> file <.> "grin"
+compileExpr post d tmpDir outDir term outFile = do
+    let appDir = outDir </> outFile ++ "_app"
+        mkGrinFile = \f => appDir </> f <.> "grin"
+        outGrinFile = mkGrinFile outFile
+        outLLFile = outDir </> outFile
 
     ds <- getDirectives (Other "grin")
+    let doOpts = getDoOpts ds
     let saveIR = getSaveIR ds
+    let skipCG = getSkipCG ds
 
-    Right _ <- coreLift $ mkdirAll tmpDir
-        | Left err => throw $ FileErr tmpDir err
+    Right _ <- coreLift $ mkdirAll appDir
+        | Left err => throw $ FileErr appDir err
 
     cdata <- getCompileData True ANF term
 
@@ -55,9 +78,10 @@ compileExpr d tmpDir outDir term outFile = do
 
     prog1 <- logTime "++ Resolve names" $ pure $ runResolveM $ traverseProg resolve prog0
 
-    logTime "++ Run optimisations" $ coreLift_ $ runGrinT (runTransforms
+    let pipeline : List (Transform (Resolved GName))
+        pipeline =
             [ SaveGrin saveIR (mkGrinFile "000_ANF")
-            , O $ Fix [ NormaliseBind ]
+            , O NormaliseBind
             , SaveGrin saveIR (mkGrinFile "001_bind_normalise")
             , O CopyPropogation
             , SaveGrin saveIR (mkGrinFile "002_copy_prop" )
@@ -70,11 +94,39 @@ compileExpr d tmpDir outDir term outFile = do
             , SaveGrin saveIR (mkGrinFile "004_unused_parameter")
             , O CaseSimplify
             , SaveGrin saveIR (mkGrinFile "005_case_simplify")
-            , O $ NormaliseBind
-            , SaveCalls saveIR (tmpDir </> "calls_graph")
-            , SaveCalledBy saveIR (tmpDir </> "called_by_graph")
+            , O NormaliseBind
+            , SaveCalls saveIR (appDir </> "calls_graph")
+            , SaveCalledBy saveIR (appDir </> "called_by_graph")
             , SaveGrin True outGrinFile
-            ]) prog1
+            ]
+
+    st <- logTime "++ Run optimisations" $ coreLift $ execGrinT' (runTransforms $
+            if doOpts
+                then pipeline
+                else [ SaveGrin True outGrinFile ])
+            (newGrinState prog1)
+
+    let [] = getErrors st
+        | errs => throw $ InternalError $ "Error running optimisations\n" ++ show errs
+
+    doLog <- unverifiedLogging "grin" 10
+
+    let grinc = "grinIdris2-exe"
+    let grinCMD =
+            grinc
+            ++ " \"" ++ (outDir </> outFile ++ "_app")
+            ++ "\" \""  ++ outGrinFile ++ "\""
+            ++ (if doLog then " --logging" else "")
+            ++ (if saveIR then " --save-ir" else "")
+            ++ (case post of 
+                    Eval => " --eval"
+                    EvalWithStats => " --eval-stats"
+                    SaveLLVM => " --save-llvm \"" ++ (outDir </> outFile) ++ "\"")
+
+    unverifiedLogC "grin" 10 $ pure grinCMD
+    unless skipCG $ (coreLift $ system grinCMD) >>= \case
+        0 => pure ()
+        errno => throw $ InternalError $ "grinIdris2-exe returned error " ++ show errno
 
     pure $ Just outGrinFile
 
@@ -83,10 +135,11 @@ executeExpr :
     (tmpDir : String) ->
     ClosedTerm -> Core ()
 executeExpr d tmpDir term = do
-    Just grinFile <- compileExpr d tmpDir tmpDir term "execute"
-        | Nothing => throw $ InternalError "compileExpr returned Nothing"
-    coreLift_ $ system $ "grin " ++ grinFile ++ " --eval"
+    ds <- getDirectives (Other "grin")
+    if getDoStats ds
+        then ignore $ compileExpr EvalWithStats d tmpDir tmpDir term "execute"
+        else ignore $ compileExpr Eval d tmpDir tmpDir term "execute"
 
 export
 grin : Codegen
-grin = MkCG compileExpr executeExpr
+grin = MkCG (compileExpr SaveLLVM) executeExpr
