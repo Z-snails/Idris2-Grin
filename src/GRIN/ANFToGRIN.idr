@@ -221,7 +221,7 @@ anfConAlt :
     AConAlt ->
     Core (Alt GName)
 anfConAlt (MkAConAlt con _ _ avs exp) = do
-    as <- traverse (newAVar . ALocal) avs
+    as <- traverse (newAVar . ALocal >=> setVarPtr) avs
     MkAlt (NodePat (MkTag Con $ IdrName con) as) <$> anfToExp exp
 
 anfConAlts (alt :: alts) def = [| anfConAlt alt :: anfConAlts alts def |]
