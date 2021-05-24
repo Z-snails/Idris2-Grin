@@ -47,7 +47,7 @@ Show Lit where
 
 Show IntPrec where
     show (Signed n) = "T_Int" ++ show n
-    show (UnSigned n) = "T_Word" ++ show n
+    show (Unsigned n) = "T_Word" ++ show n
 
 export
 Show SType where
@@ -55,6 +55,7 @@ Show SType where
     show DoubleTy = "T_Float"
     show CharTy = "T_Char"
     show StringTy = "T_String"
+    show UnitTy = "T_Unit"
     show (HeapPtr i) = "T_Location" ++ show i
 
 export

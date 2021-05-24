@@ -19,4 +19,6 @@ simplify (Case val alts) = case alts of
 
 export
 caseSimplify : GrinM name ()
-caseSimplify = mapProg $ mapExpProg simplify
+caseSimplify = do
+    mapProg $ mapExpProg simplify
+    invalidate CallGraphs

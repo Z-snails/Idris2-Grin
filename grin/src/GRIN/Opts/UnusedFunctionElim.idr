@@ -6,7 +6,6 @@ import Data.SortedSet
 import Data.SortedMap as Map
 
 import GRIN.AST
-import GRIN.Analysis
 import GRIN.GrinM
 
 export

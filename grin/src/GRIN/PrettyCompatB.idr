@@ -7,6 +7,8 @@ import Data.String.Builder
 import GRIN.AST
 import GRIN.Name
 
+%default total
+
 export
 ShowB Var where
     showB (MkVar i) = "v" <+> showB @{FromShow} i
@@ -50,7 +52,7 @@ ShowB Lit where
 
 ShowB IntPrec where
     showB (Signed n) = "T_Int" <+> showB @{FromShow} n
-    showB (UnSigned n) = "T_Word" <+> showB @{FromShow} n
+    showB (Unsigned n) = "T_Word" <+> showB @{FromShow} n
 
 export
 ShowB SType where
@@ -58,6 +60,7 @@ ShowB SType where
     showB DoubleTy = "T_Float"
     showB CharTy = "T_Char"
     showB StringTy = "T_String"
+    showB UnitTy = "T_Unit"
     showB (HeapPtr i) = "T_Location" <+> showB @{FromShow} i
 
 export
@@ -94,7 +97,7 @@ Show name => ShowB (CasePat name) where
 mutual
     showBSExp : Show name => (indent : Nat) -> SExp name -> Builder
     showBSExp i (Do exp) = "do\n"
-        <+> indent (1 + i) (showBExp (1 + i) exp) 
+        <+> indent (1 + i) (assert_total $ showBExp (1 + i) exp) 
     showBSExp _ (App f args) = function @{FromShow} f args
     showBSExp _ (Pure val) = "pure " <+> showB val
     showBSExp _ (Store val) = "store " <+> showB val
@@ -115,7 +118,7 @@ mutual
     showBExp i (Case val alts) =
         "case " <+> showB val <+> " of"
         <+> foldMap (\alt => "\n"
-            <+> indent (1 + i) (showBAlt (i + 1) alt))
+            <+> indent (1 + i) (assert_total $ showBAlt (i + 1) alt))
             alts
 
     showBAlt : Show name => (indent : Nat) -> Alt name -> Builder
@@ -139,8 +142,51 @@ export
 Show name => ShowB (Def name) where
     showB (MkDef fn args exp _) = function @{FromShow} fn args <+> " =\n" <+> indent 1 (showBExp 1 exp)
 
+record Externs name where
+    constructor MkExterns
+    primopPure : List (Extern name)
+    primopEffectful : List (Extern name)
+    ffiPure : List (Extern name)
+    ffiEffectful : List (Extern name)
+
+initExterns : Externs name
+initExterns = MkExterns [] [] [] []
+
+collectExts : Foldable t => t (Extern name) -> Externs name
+collectExts = foldl addExtern initExterns
+  where
+    addExtern : Externs name -> Extern name -> Externs name
+    addExtern exts ext = case ext.prim of
+        Primop => case ext.eff of
+            NoEffect => record { primopPure $= (ext ::) } exts
+            Effect => record { primopEffectful $= (ext ::) } exts
+        FFI => case ext.eff of
+            NoEffect => record { ffiPure $= (ext ::) } exts
+            Effect => record { ffiEffectful $= (ext ::) } exts
+
+whenCons : List a -> Lazy Builder -> Builder
+whenCons [] _ = ""
+whenCons xs s = s
+
+Show name => ShowB (Extern name) where
+    showB ext = indent 1 $ showB @{FromShow} ext.extName <+> " :: " <+> showB ext.type
+
+export
+Foldable t => Show name => ShowB (t (Extern name)) where
+    showB exts0 =
+        let exts = collectExts exts0
+         in whenCons exts.primopPure ("primop pure"
+            <+> nl1Sep exts.primopPure)
+            <+> whenCons exts.primopEffectful ("primop effectful"
+            <+> nl1Sep exts.primopEffectful)
+            <+> whenCons exts.ffiPure ("ffi pure"
+            <+> nl1Sep exts.ffiPure)
+            <+> whenCons exts.ffiEffectful ("ffi effectful"
+            <+> nl1Sep exts.ffiEffectful)
+
 export
 Show name => ShowB (Prog name) where
     showB (MkProg exts defs _) =
-        -- showB externs
-        nlSep $ values defs
+        showB exts
+        <+> "\n"
+        <+> nlSep (values defs)

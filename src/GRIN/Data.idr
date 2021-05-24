@@ -333,7 +333,7 @@ export
 newVar : Ref NextVar Var => Core Var
 newVar = do
     v <- get NextVar
-    put NextVar (nextVar v)
+    put NextVar (incVar v)
     pure v
 
 constant :
