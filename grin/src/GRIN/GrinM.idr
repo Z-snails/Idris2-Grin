@@ -7,13 +7,14 @@ import public Control.Monad.State
 import public Control.Monad.Identity
 
 import GRIN.AST
-import public GRIN.Analysis
+import public GRIN.Error
+import public GRIN.GrinState
 import GRIN.Analysis.CallGraph
 
 export
 record GrinT name (m : Type -> Type) a where
     constructor MkGrinM
-    unGrinM : StateT (Analysis name) m a
+    unGrinM : StateT (GrinState name) m a
 
 public export
 GrinM : Type -> Type -> Type
@@ -37,10 +38,14 @@ MonadTrans (GrinT name) where
     lift = MkGrinM . lift
 
 export
-Monad m => MonadState (Analysis name) (GrinT name m) where
+Monad m => MonadState (GrinState name) (GrinT name m) where
     get = MkGrinM get
     put = MkGrinM . put
     state = MkGrinM . state
+
+export
+HasIO m => HasIO (GrinT name m) where
+    liftIO = lift . liftIO
 
 export
 mapProg : Monad m => (Prog name -> Prog name) -> GrinT name m ()
@@ -82,16 +87,24 @@ liftGrinM : (forall a. m1 a -> m2 a) -> GrinT name m1 a -> GrinT name m2 a
 liftGrinM f (MkGrinM (ST m)) = MkGrinM $ ST \st => f $ m st
 
 export
-runGrinT' : GrinT name m a -> Analysis name -> m (Analysis name, a)
+newError : Monad m => Error -> GrinT name m ()
+newError err = modify $ record { errors $= (err ::) }
+
+export
+runGrinT' : GrinT name m a -> GrinState name -> m (GrinState name, a)
 runGrinT' m a = runStateT a $ unGrinM m
 
 export
-runGrinT : Functor m => GrinT name m a -> Prog name -> m (Prog name, a)
-runGrinT m p = mapFst prog <$> runGrinT' m (newAnalysis p)
+execGrinT' : Functor m => GrinT name m a -> GrinState name -> m (GrinState name)
+execGrinT' m st = fst <$> runGrinT' m st
 
 export
-runGrinM' : GrinM name a -> Analysis name -> (Analysis name, a)
-runGrinM' m a = runIdentity $ runGrinT' m a
+runGrinT : Functor m => GrinT name m a -> Prog name -> m (Prog name, a)
+runGrinT m p = mapFst prog <$> runGrinT' m (newGrinState p)
+
+export
+runGrinM' : GrinM name a -> GrinState name -> (GrinState name, a)
+runGrinM' m st = runIdentity $ runGrinT' m st
 
 export
 runGrinM : GrinM name a -> Prog name -> (Prog name, a)
