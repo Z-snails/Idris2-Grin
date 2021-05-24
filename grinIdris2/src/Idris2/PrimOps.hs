@@ -15,6 +15,14 @@ ffi pure
 
 primop pure
     _prim_add_Int :: T_Int64 -> T_Int64 -> T_Int64
+    _prim_sub_Int :: T_Int64 -> T_Int64 -> T_Int64
+    _prim_mul_Int :: T_Int64 -> T_Int64 -> T_Int64
+    _prim_div_Int :: T_Int64 -> T_Int64 -> T_Int64
+    _prim_lt_Int :: T_Int64 -> T_Int64 -> T_Int64
+    _prim_lte_Int :: T_Int64 -> T_Int64 -> T_Int64
+    _prim_eq_Int :: T_Int64 -> T_Int64 -> T_Int64
+    _prim_gte_Int :: T_Int64 -> T_Int64 -> T_Int64
+    _prim_gt_Int :: T_Int64 -> T_Int64 -> T_Int64
 
 ffi effectful
     _prim_clear_Integer :: %Integer -> T_Unit

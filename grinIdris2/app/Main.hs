@@ -25,28 +25,47 @@ idris2Opts outDir opts = parseOpts opts $ defaultOpts
     , _poLogging = False
     }
 
-postPipeline :: FilePath -> [PipelineStep]
-postPipeline llvm = [ SaveLLVM $ Abs llvm ]
+postPipeline :: [String] -> [PipelineStep]
+postPipeline [] = []
+postPipeline ("--save-llvm" : llvm : opts) = SaveLLVM (Abs llvm) : postPipeline opts
+postPipeline ("--eval" : opts) = PureEvalPlugin evalPrimOp False : postPipeline opts
+postPipeline ("--eval-stats" : opts) = PureEvalPlugin evalPrimOp True : postPipeline opts
+postPipeline (_ : opts) = postPipeline opts
+
+doOptimise :: [String] -> Bool
+doOptimise [] = True
+doOptimise ("--eval" : opts) = False
+doOptimise ("--eval-stats" : opts) = False
+doOptimise (_ : opts) = doOptimise opts
 
 help :: String
 help = unlines
-    [ "Grin compiler for idris2grin."
+    [ "Grin compiler for idris2grin"
     , "Usage:"
-    , "  grinIdris2-exe <working directory> <input file>.grin <output file> [options]"
+    , "  grinIdris2-exe <working directory> <input file>.grin [options]"
     , ""
     , "Options:"
-    , "  --logging          enable logging"
-    , "  --save-ir          save intermediate grin files"
+    , "  --logging              enable logging"
+    , "  --save-ir              save intermediate grin files"
+    , "  --eval                 run pure evaluator"
+    , "  --eval-stats           run pure evaluator with statistics"
+    , "  --save-llvm <file>     save llvm to file."
     ]
+
+-- evalPlugin :: EvalPlugin
+-- evalPlugin
 
 main :: IO ()
 main = do
     args <- getArgs
     case args of
         [ "--help" ] -> putStrLn help
-        (workingDir : input : output : opts) -> do
+        (workingDir : input : opts) -> do
             content <- T.readFile input
             (typeEnv, prog0) <- either (throwIO . userError . M.errorBundlePretty) pure $ parseGrinWithTypes input content
             let prog1 = concatPrograms [idris2PrimOps, prog0]
-            void $ optimize (idris2Opts workingDir opts) prog1 [] (postPipeline output)
+            let doOpts = doOptimise opts
+            if doOpts
+                then void $ optimize (idris2Opts workingDir opts) prog1 [] (postPipeline opts)
+                else void $ optimizeWith (idris2Opts workingDir opts) prog1 [] [] (postPipeline opts)
         _ -> throwIO $ userError "Unrecognised options"
