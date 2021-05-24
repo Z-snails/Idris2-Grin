@@ -20,9 +20,11 @@ library
   hs-source-dirs:
       src
   default-extensions:
+      LambdaCase
       OverloadedStrings
   build-depends:
       base >=4.7 && <5
+    , containers
     , filepath
     , grin
     , megaparsec ==7.*
@@ -36,10 +38,12 @@ executable grinIdris2-exe
   hs-source-dirs:
       app
   default-extensions:
+      LambdaCase
       OverloadedStrings
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers
     , filepath
     , grin
     , grinIdris2
@@ -55,10 +59,12 @@ test-suite grinIdris2-test
   hs-source-dirs:
       test
   default-extensions:
+      LambdaCase
       OverloadedStrings
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
+    , containers
     , filepath
     , grin
     , grinIdris2
