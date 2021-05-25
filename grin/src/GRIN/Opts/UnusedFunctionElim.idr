@@ -9,7 +9,7 @@ import GRIN.AST
 import GRIN.GrinM
 
 export
-unusedFuncElim : Ord name => GrinM name ()
+unusedFuncElim : Ord name => Monad m => GrinT name m ()
 unusedFuncElim = do
     used <- getCalls
     MkProg exts defs main <- gets prog

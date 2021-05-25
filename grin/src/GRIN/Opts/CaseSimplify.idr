@@ -18,7 +18,7 @@ simplify (Case val alts) = case alts of
     _ => Case val $ map (mapExpAlt simplify) alts
 
 export
-caseSimplify : GrinM name ()
+caseSimplify : Monad m => GrinT name m ()
 caseSimplify = do
     mapProg $ mapExpProg simplify
     invalidate CallGraphs

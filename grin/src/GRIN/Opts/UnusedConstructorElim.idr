@@ -44,7 +44,7 @@ removeExp cons (Case val alts) = Case val $ filter pred alts
         Nothing => True
 
 export
-unusedConsElim : Ord name => GrinM name ()
+unusedConsElim : Monad m => Ord name => GrinT name m ()
 unusedConsElim = do
     p@(MkProg exts defs _) <- gets prog
     let used = foldMap collectDef defs

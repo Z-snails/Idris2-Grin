@@ -57,5 +57,5 @@ mutual
     copyPropAlt cm (MkAlt pat exp) = MkAlt pat (copyPropExp cm exp)
 
 export
-copyProp : GrinM name ()
+copyProp : Monad m => GrinT name m ()
 copyProp = mapProg $ mapExpProg (copyPropExp empty)

@@ -18,7 +18,7 @@ collectWhen True a = insert a
 collectWhen False _ = id
 
 collectUsedVar : SortedSet Var -> Var -> SortedSet Var -> SortedSet Var
-collectUsedVar params var m = collectWhen (contains var params) var m
+collectUsedVar params var = collectWhen (contains var params) var
 
 collectUsedSVal : SortedSet Var -> SVal -> SortedSet Var -> SortedSet Var
 collectUsedSVal params = \case
@@ -123,7 +123,7 @@ Semigroup (Prog name) where
     p <+> _ = p
 
 export
-unusedParamElim : Ord name => GrinM name ()
+unusedParamElim : Monad m => Ord name => GrinT name m ()
 unusedParamElim = do
     MkProg exts defs m <- gets prog
     let nm = foldMap (uncurry singleton . collectUsedDef) defs

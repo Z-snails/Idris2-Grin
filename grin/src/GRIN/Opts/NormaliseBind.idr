@@ -19,5 +19,5 @@ mutual
         Case v1 alts => Bind v0 (mkDo $ Case v1 $ mapExpAlt normaliseExp <$> alts)
 
 export
-normaliseBind : GrinM name ()
+normaliseBind : Monad m => GrinT name m ()
 normaliseBind = mapProg $ mapExpProg normaliseExp
