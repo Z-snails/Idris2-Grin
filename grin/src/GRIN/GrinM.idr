@@ -91,6 +91,10 @@ newError : Monad m => Error -> GrinT name m ()
 newError err = modify $ record { errors $= (err ::) }
 
 export
+resetVarMap : Monad m => GrinT name m ()
+resetVarMap = modify $ record { varMap = empty }
+
+export
 runGrinT' : GrinT name m a -> GrinState name -> m (GrinState name, a)
 runGrinT' m a = runStateT a $ unGrinM m
 
@@ -99,7 +103,7 @@ execGrinT' : Functor m => GrinT name m a -> GrinState name -> m (GrinState name)
 execGrinT' m st = fst <$> runGrinT' m st
 
 export
-runGrinT : Functor m => GrinT name m a -> Prog name -> m (Prog name, a)
+runGrinT : Ord name => Functor m => GrinT name m a -> Prog name -> m (Prog name, a)
 runGrinT m p = mapFst prog <$> runGrinT' m (newGrinState p)
 
 export
@@ -107,9 +111,9 @@ runGrinM' : GrinM name a -> GrinState name -> (GrinState name, a)
 runGrinM' m st = runIdentity $ runGrinT' m st
 
 export
-runGrinM : GrinM name a -> Prog name -> (Prog name, a)
+runGrinM : Ord name => GrinM name a -> Prog name -> (Prog name, a)
 runGrinM m p = runIdentity $ runGrinT m p
 
 export
-execGrinM : GrinM name a -> Prog name -> Prog name
+execGrinM : Ord name => GrinM name a -> Prog name -> Prog name
 execGrinM m p = fst $ runGrinM m p

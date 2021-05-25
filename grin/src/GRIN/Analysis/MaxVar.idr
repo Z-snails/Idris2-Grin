@@ -3,9 +3,6 @@ module GRIN.Analysis.MaxVar
 import Data.SortedMap
 import GRIN.AST
 
-Ord Var where
-    MkVar x `compare` MkVar y = x `compare` y
-
 Semigroup Var where
     MkVar x <+> MkVar y = MkVar (max x y)
 

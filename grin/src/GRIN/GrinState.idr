@@ -18,6 +18,7 @@ record GrinState name where
     prog : Prog name
     calls : Maybe (CallGraph name)
     calledBy : Maybe (CallGraph name)
+    toInline : SortedMap name (Def name) -- should have all fetch ids removed
     errors : List Error
     varMap : SortedMap Var Var
     nextVar : Var
@@ -27,8 +28,16 @@ getErrors : GrinState name -> List Error
 getErrors = reverse . errors
 
 export
-newGrinState : Prog name -> GrinState name
-newGrinState p = MkGrinState p Nothing Nothing [] empty (incVar $ maxVar p)
+newGrinState : Ord name => Prog name -> GrinState name
+newGrinState prog = MkGrinState
+    { prog
+    , calls = Nothing
+    , calledBy = Nothing
+    , toInline = empty
+    , errors = []
+    , varMap = empty
+    , nextVar = incVar $ maxVar prog
+    }
 
 public export
 data AnalysisTag
