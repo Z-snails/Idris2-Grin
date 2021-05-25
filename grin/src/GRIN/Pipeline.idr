@@ -12,44 +12,64 @@ import GRIN.Error
 import GRIN.GrinM
 
 import GRIN.Analysis.CallGraph
+import GRIN.Analysis.Inline
 
 import GRIN.Opts.CaseSimplify
 import GRIN.Opts.CopyPropogation
+import GRIN.Opts.Inline
+import GRIN.Opts.NormaliseBind
 import GRIN.Opts.UnusedConstructorElim
 import GRIN.Opts.UnusedFunctionElim
 import GRIN.Opts.UnusedParameterElim
-import GRIN.Opts.NormaliseBind
 
 public export
 data Optimise name
-    = CopyPropogation
+    = CaseSimplify
+    | CopyPropogation
+    | InlineSimpleDef
+    | InlineUsedOnce
+    | InlineFunc name
+    | NormaliseBind
     | UnusedConstructorElim
     | UnusedFunctionElim
     | UnusedParamElim
-    | NormaliseBind
-    | CaseSimplify
     | Fix (List (Optimise name))
 
-Show (Optimise name) where
+Show name => Show (Optimise name) where
     show CopyPropogation = "copy propogation"
+    show CaseSimplify = "case simplification"
+    show InlineSimpleDef = "inline simple definitions"
+    show InlineUsedOnce = "inline functions used once"
+    show (InlineFunc fn) = "inline " ++ show fn
+    show NormaliseBind = "bind normalisation"
     show UnusedConstructorElim = "unused constructor elimintation"
     show UnusedFunctionElim = "unused function elimination"
     show UnusedParamElim = "unused parameter elimination"
-    show NormaliseBind = "bind normalisation"
-    show CaseSimplify = "case simplification"
     show (Fix os) = "fix " ++ show os
 
 export
-runOpts : Ord name => List (Optimise name) -> GrinM name ()
+runOpts : Monad m => Ord name => List (Optimise name) -> GrinT name m ()
 
 export
-runOpt : Ord name => Optimise name -> GrinM name ()
-runOpt CopyPropogation = copyProp
+runOpt : Monad m => Ord name => Optimise name -> GrinT name m ()
 runOpt CaseSimplify = caseSimplify
+runOpt CopyPropogation = copyProp
+runOpt InlineSimpleDef = do
+    inlineSimpleDefs
+    inlineAll
+runOpt InlineUsedOnce = do
+    inlineUsedOnce
+    inlineAll
+runOpt (InlineFunc fn) = do
+    ds <- gets $ defs . prog
+    case lookup fn ds of
+        Nothing => pure ()
+        Just def => modify $ record { toInline = singleton fn def }
+    inlineAll
+runOpt NormaliseBind = normaliseBind
 runOpt UnusedConstructorElim = unusedConsElim
 runOpt UnusedFunctionElim = unusedFuncElim
 runOpt UnusedParamElim = unusedParamElim
-runOpt NormaliseBind = normaliseBind
 runOpt s@(Fix ss) = do
     p0 <- gets prog
     runOpts ss
@@ -67,16 +87,18 @@ data Transform name
     | SaveGrin Bool String
     | SaveCalls Bool String
     | SaveCalledBy Bool String
+    | SaveInlineSimple Bool String
 
-Show (Transform name) where
+Show name => Show (Transform name) where
     show (O o) = show o
     show (SaveGrin _ _) = "save GRIN"
     show (SaveCalls _ _) = "save calls graph"
     show (SaveCalledBy _ _) = "save called by graph"
+    show (SaveInlineSimple _ _) = "save simple functions to inline"
 
 export
 runTransform : Show name => ShowB (Prog name) => Ord name => Transform name -> GrinT name IO ()
-runTransform (O opt) = liftGrinM (pure . runIdentity) $ runOpt opt
+runTransform (O opt) = runOpt opt
 runTransform (SaveGrin True f) = do
     p <- gets prog
     let pretty = runBuilder $ showB p
@@ -84,15 +106,21 @@ runTransform (SaveGrin True f) = do
         | Left err => newError $ FileErr f err
     pure ()
 runTransform (SaveCalls True f) = do
-    calls <- getCalls
-    let pretty = showCallGraph calls
+    cg <- getCalls
+    let pretty = showCallGraph cg
     Right () <- lift $ writeFile f pretty
         | Left err => newError $ FileErr f err
     pure ()
 runTransform (SaveCalledBy True f) = do
-    calls <- getCalledBy
-    let pretty = showCallGraph calls
+    cg <- getCalledBy
+    let pretty = showCallGraph cg
     Right () <- lift $ writeFile f pretty
+        | Left err => newError $ FileErr f err
+    pure ()
+runTransform (SaveInlineSimple True f) = do
+    inlineSimpleDefs
+    ti <- gets toInline
+    Right () <- lift $ writeFile f $ show $ keys ti
         | Left err => newError $ FileErr f err
     pure ()
 runTransform _ = pure ()
