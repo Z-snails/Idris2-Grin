@@ -84,16 +84,20 @@ compileExpr post d tmpDir outDir term outFile = do
             , O NormaliseBind
             , SaveGrin saveIR (mkGrinFile "001_bind_normalise")
             , O CopyPropogation
-            , SaveGrin saveIR (mkGrinFile "002_copy_prop" )
+            , SaveGrin saveIR (mkGrinFile "002_copy_prop")
+            , O InlineSimpleDef
+            , SaveGrin saveIR (mkGrinFile "003_inline_simple")
             , O $ Fix
                 [ UnusedFunctionElim
                 , UnusedConstructorElim
                 ]
-            , SaveGrin saveIR (mkGrinFile "003_unused_function_constructor")
+            , SaveGrin saveIR (mkGrinFile "004_unused_function_constructor")
+            , O  $ InlineUsedOnce
+            , SaveGrin saveIR (mkGrinFile "005_inline_used_once")
             , O $ Fix [ UnusedParamElim ]
-            , SaveGrin saveIR (mkGrinFile "004_unused_parameter")
+            , SaveGrin saveIR (mkGrinFile "006_unused_parameter")
             , O CaseSimplify
-            , SaveGrin saveIR (mkGrinFile "005_case_simplify")
+            , SaveGrin saveIR (mkGrinFile "007_case_simplify")
             , O NormaliseBind
             , SaveCalls saveIR (appDir </> "calls_graph")
             , SaveCalledBy saveIR (appDir </> "called_by_graph")
