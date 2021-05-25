@@ -13,10 +13,12 @@ authors = "Zoe Stafford"
 depends = contrib
 
 -- modules to install
-modules = Data.String.Builder
+modules = Data.SortedMap.Extra
+        , Data.String.Builder
         , Data.String.Utils
         , GRIN.AST
         , GRIN.Analysis.CallGraph
+        , GRIN.Analysis.Inline
         , GRIN.Analysis.MaxVar
         , GRIN.Error
         , GRIN.GrinState
