@@ -205,6 +205,10 @@ anfToExp (AConstCase _ av alts def) = do
          $ Bind (VVar v) (App (GrinName Eval) [vp])
          $ Case (VVar v) !(anfConstAlts alts def)
 
+anfToExp (APrimVal _ (BI x)) = do
+    v <- newVar
+    pure $ Bind (VVar v) (Pure $ VLit $ LString $ show x)
+         $ SimpleExp (App (PrimFunc $ Cast StringType IntegerType) [v])
 anfToExp (APrimVal _ c) = pure $ mkSimpleExp $ Pure $ anfConstant c
 
 anfToExp (AErased _) = pure $ mkSimpleExp $ Pure nullVal
