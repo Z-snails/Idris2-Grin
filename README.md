@@ -1,7 +1,7 @@
 # Idris2grin
 GRIN backend for Idris2.  
 
-This only works with recent versions of idris2 (v0.3.0 +).
+This only works with recent versions of idris2 (v0.4.0 +).
 
 ## Todo
 - [x] Finish unfinished functions

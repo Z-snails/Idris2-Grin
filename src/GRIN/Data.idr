@@ -415,6 +415,10 @@ getCFType : CFType -> Maybe (GType GName)
 getCFType = \case
     CFUnit => Just $ SimpleType UnitTy
     CFInt => Just $ SimpleType $ IntTy $ Signed 64
+    CFInt8 => Just $ SimpleType $ IntTy $ Signed 8
+    CFInt16 => Just $ SimpleType $ IntTy $ Signed 16
+    CFInt32 => Just $ SimpleType $ IntTy $ Signed 32
+    CFInt64 => Just $ SimpleType $ IntTy $ Signed 64
     CFUnsigned8 => Just $ SimpleType $ IntTy $ Unsigned 8
     CFUnsigned16 => Just $ SimpleType $ IntTy $ Unsigned 16
     CFUnsigned32 => Just $ SimpleType $ IntTy $ Unsigned 32

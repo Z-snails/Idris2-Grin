@@ -25,7 +25,7 @@ inlineSimpleDefs : Ord name => Monad m => GrinT name m ()
 inlineSimpleDefs = do
     MkProg _ defs m <- gets prog
     modify $ record { toInline =
-        delete m $ foldMap @{(%search, MonoidMergeLeft)} simpleDef defs }
+        delete m $ foldMap @{%search} @{MonoidMergeLeft} simpleDef defs }
 
 calledSExp : Eq name => name -> SExp name -> Nat
 calledExp : Eq name => name -> Exp name -> Nat
@@ -36,7 +36,7 @@ calledSExp _ _ = 0
 
 calledExp fn (SimpleExp e) = calledSExp fn e
 calledExp fn (Bind _ rhs rest) = calledSExp fn rhs + calledExp fn rest
-calledExp fn (Case _ alts) = foldMap @{(%search, Additive)} (calledExp fn . altExp) alts
+calledExp fn (Case _ alts) = foldMap @{%search} @{Additive} (calledExp fn . altExp) alts
 
 export
 inlineUsedOnce : Ord name => Monad m => GrinT name m ()
