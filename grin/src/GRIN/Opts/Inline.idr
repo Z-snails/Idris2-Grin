@@ -25,7 +25,7 @@ mutual
         Just (MkDef _ as' e0 _) => do
             putVars $ fromList $ zip as' as
             e1 <- updateVars e0
-            e2 <- inlineExp im e0
+            e2 <- inlineExp im e1
             pure $ mkDo e2
     inlineSExp im e = pure e
 
