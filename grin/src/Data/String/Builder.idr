@@ -34,7 +34,6 @@ runBuilder (MkBuilder size tree) = unsafePerformIO $ do
         | Nothing => pure ""
     runBuilderTree b 0 tree
     str <- getString b 0 size
-    freeBuffer b
     pure str
 
 export

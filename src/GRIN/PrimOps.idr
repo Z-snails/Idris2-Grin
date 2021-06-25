@@ -126,6 +126,10 @@ getCFTypeCon : CFType -> Maybe (Maybe (Tag GName))
 getCFTypeCon = \case
     CFUnit => Just Nothing
     CFInt => just2 intTag
+    CFInt8 => just2 int8Tag
+    CFInt16 => just2 int16Tag
+    CFInt32 => just2 int32Tag
+    CFInt64 => just2 int64Tag
     CFUnsigned8 => just2 bits8Tag
     CFUnsigned16 => just2 bits16Tag
     CFUnsigned32 => just2 bits32Tag
