@@ -46,9 +46,8 @@ extra-deps:
 - llvm-hs-pretty-0.6.1.0
 - monad-gen-0.3.0.1@sha256:a2569465cfbd468d3350ef25de56b3362580e77537224313aab1210f40804a3b,821
 - set-extra-1.4.1@sha256:c58aa620704f609f289953e7c1f9c1653fd1498f0984b0f03a3f8f38f7ed5a84,533
-- github: Z-snails/grin
-  branch: fix-arity-raising
-  commit: 6de88bc9a9e583b4ef48ab6b7cc535dce990df18
+- github: grin-compiler/grin
+  commit: 07122f9b9fba5d933a99ae588b2186a1ad4baf11
   subdirs:
   - grin
 - github: csabahruska/llvm-hs
