@@ -4,6 +4,7 @@ import Data.Vect
 
 import Core.CompileExpr
 import Core.Core
+import Core.Name
 import Core.TT
 
 import GRIN.AST
@@ -13,7 +14,7 @@ import GRIN.Data
 
 bindArgs :
     Ref NextVar Var =>
-    Vect arity (Tag GName) ->
+    List (Tag GName) ->
     List Var ->
     (List Var -> Core (Exp GName)) ->
     Core (Exp GName)
@@ -35,7 +36,7 @@ primOp aTags op retTag = do
     args <- replicate arity newVar
     ret <- newVar
     pure $ mkDef (PrimName op) args
-         !(bindArgs aTags args
+         !(bindArgs (toList aTags) args
          $ \as => pure $ Bind (VVar ret) (App (PrimFunc op) as)
          $ SimpleExp $ Pure $ ConstTagNode retTag [SVar ret])
 
@@ -70,6 +71,9 @@ charTag = mkConstTag $ Ch '\0'
 doubleTag : Tag GName
 doubleTag = mkConstTag $ Db 0.0
 
+ioResTag : Tag GName
+ioResTag = MkTag Con $ IdrName $ NS primIONS $ UN "MkIORes"
+
 intTags : List (Constant, Tag GName)
 intTags =
     [ (IntType, intTag)
@@ -77,6 +81,9 @@ intTags =
     , (Bits8Type, bits8Tag), (Bits16Type, bits16Tag), (Bits32Type, bits32Tag), (Bits64Type, bits64Tag)
     , (IntegerType, integerTag)
     ]
+
+cmpTags : List (Constant, Tag GName)
+cmpTags = [(StringType, stringTag), (CharType, charTag), (DoubleType, doubleTag)] ++ intTags
 
 concatTraverse : (a -> Core (List b)) -> List a -> Core (List b)
 concatTraverse f = map concat . traverse f
@@ -89,7 +96,9 @@ export
 primOps : Ref NextVar Var => Core (List (Def GName))
 primOps = concatCore
     [ concatTraverse mkBinOps intTags
-    , concatTraverse mkCmpOps intTags
+    , concatTraverse mkCmpOps cmpTags
+    , stringOps
+    , miscOps
     ]
   where
     mkBinOps : (Constant, Tag GName) -> Core (List (Def GName))
@@ -97,6 +106,27 @@ primOps = concatCore
 
     mkCmpOps : (Constant, Tag GName) -> Core (List (Def GName))
     mkCmpOps (ty, tag) = traverse (\fn => primOp [tag, tag] fn intTag) [LT ty, LTE ty, EQ ty, GTE ty, GT ty]
+
+    stringOps : Core (List (Def GName))
+    stringOps = sequence
+        [ primOp [stringTag] StrLength intTag
+        , primOp [stringTag] StrHead charTag
+        , primOp [stringTag] StrTail stringTag
+        , primOp [stringTag, intTag] StrIndex charTag
+        , primOp [charTag, stringTag] StrCons stringTag
+        , primOp [stringTag, stringTag] StrAppend stringTag
+        , primOp [stringTag] StrReverse stringTag
+        , primOp [intTag, intTag, stringTag] StrSubstr stringTag
+        ]
+
+    miscOps : Core (List (Def GName))
+    miscOps = sequence
+        [ do
+            ty1 <- newVar
+            ty2 <- newVar
+            arg <- newVar
+            pure $ mkDef (PrimName BelieveMe) [ty1, ty2, arg] $ SimpleExp $ App (PrimFunc BelieveMe) [ty1, ty2, arg]
+        ]
 
 export
 externs : List (Extern GName)
@@ -122,62 +152,92 @@ primCons _ = traverse mkPrimAlt cons
         v <- newVar
         pure $ MkAlt (getConstantNodePat v c) $ SimpleExp $ Pure $ wrapConstant v c
 
-getCFTypeCon : CFType -> Maybe (Maybe (Tag GName))
-getCFTypeCon = \case
-    CFUnit => Just Nothing
-    CFInt => just2 intTag
-    CFInteger => just2 integerTag
-    CFInt8 => just2 int8Tag
-    CFInt16 => just2 int16Tag
-    CFInt32 => just2 int32Tag
-    CFInt64 => just2 int64Tag
-    CFUnsigned8 => just2 bits8Tag
-    CFUnsigned16 => just2 bits16Tag
-    CFUnsigned32 => just2 bits32Tag
-    CFUnsigned64 => just2 bits64Tag
-    CFString => just2 stringTag
-    CFDouble => just2 doubleTag
-    CFChar => just2 charTag
-    CFPtr => just2 $ MkTag Con $ GrinName PtrVar
-    CFGCPtr => just2 $ MkTag Con $ GrinName PtrVar
-    CFBuffer => just2 $ MkTag Con $ GrinName PtrVar
-    CFForeignObj => just2 $ MkTag Con $ GrinName PtrVar
-    CFWorld => just2 $ MkTag Con $ GrinName PtrVar
-    CFFun _ _ => Nothing
-    CFIORes ty => assert_total $ getCFTypeCon ty
-    CFStruct _ _ => Nothing
-    CFUser _ _ => Nothing
-  where
-    just2 : a -> Maybe (Maybe a)
-    just2 = Just . Just
+getCFTypeCon : CFType -> Tag GName
+getCFTypeCon CFUnit = intTag
+getCFTypeCon CFInt = intTag
+getCFTypeCon CFInteger = integerTag
+getCFTypeCon CFInt8 = int8Tag
+getCFTypeCon CFInt16 = int16Tag
+getCFTypeCon CFInt32 = int32Tag
+getCFTypeCon CFInt64 = int64Tag
+getCFTypeCon CFUnsigned8 = bits8Tag
+getCFTypeCon CFUnsigned16 = bits16Tag
+getCFTypeCon CFUnsigned32 = bits32Tag
+getCFTypeCon CFUnsigned64 = bits64Tag
+getCFTypeCon CFString = stringTag
+getCFTypeCon CFDouble = doubleTag
+getCFTypeCon CFChar = charTag
+getCFTypeCon CFPtr = MkTag Con $ GrinName PtrVar
+getCFTypeCon CFGCPtr = MkTag Con $ GrinName PtrVar
+getCFTypeCon CFBuffer = MkTag Con $ GrinName PtrVar
+getCFTypeCon CFForeignObj = MkTag Con $ GrinName PtrVar
+getCFTypeCon CFWorld = MkTag Con $ GrinName PtrVar
+getCFTypeCon (CFFun _ _) = MkTag Con $ GrinName PtrVar
+getCFTypeCon (CFIORes ty) = assert_total $ getCFTypeCon ty
+getCFTypeCon (CFStruct _ _) = MkTag Con $ GrinName PtrVar
+getCFTypeCon (CFUser _ _) = MkTag Con $ GrinName PtrVar
 
-getCFTypeCons : List CFType -> Maybe (arity ** Vect arity (Tag GName))
-getCFTypeCons [] = Just (_ ** [])
-getCFTypeCons (CFWorld :: args) = getCFTypeCons args
-getCFTypeCons (arg :: args) = case getCFTypeCon arg of
-    Nothing => Nothing
-    Just Nothing => Nothing -- CFUnit can't be an argument
-    Just (Just tag) => case getCFTypeCons args of
-        Nothing => Nothing
-        Just (_ ** tags) => Just (_ ** tag :: tags)
+%inline
+getCFTypeCons : List CFType -> List (Tag GName)
+getCFTypeCons = map getCFTypeCon
+
+bindArgsWithWorld :
+    Ref NextVar Var =>
+    List CFType ->
+    List Var ->
+    (List Var -> Var -> Core (Exp GName)) ->
+    Core (Exp GName)
+bindArgsWithWorld tys args f = doBind tys args Nothing $ handleNoWorld f
+  where
+    doBind :
+        List CFType ->
+        List Var ->
+        Maybe Var ->
+        (List Var -> Maybe Var -> Core (Exp GName)) ->
+        Core (Exp GName)
+    doBind [] [] world k = k [] world
+    doBind (CFWorld :: tys) (arg :: args) _ k = doBind tys args (Just arg) k
+    doBind (ty :: tys) (arg :: args) world k = do
+        v <- newVar
+        rest <- doBind tys args world (k . (v ::))
+        pure $ Bind (ConstTagNode (getCFTypeCon ty) [SVar v]) (Pure $ VVar arg)
+             rest
+    doBind _ _ _ _ = throw $ InternalError "Mismatch between number of arguments and number of types"
+
+    handleNoWorld :
+        (List Var ->       Var -> Core (Exp GName)) ->
+        (List Var -> Maybe Var -> Core (Exp GName))
+    handleNoWorld f vs Nothing = throw $ InternalError "Unable to find World in ffi call"
+    handleNoWorld f vs (Just world) = f vs world
 
 export
 mkFFIWrapper :
     Ref NextVar Var =>
+    GName ->
     List CFType ->
     CFType ->
     GName -> -- primitive function
-    List Var ->
-    Core (Exp GName)
-mkFFIWrapper args ret op vs = do
-    let Just (ar ** argCons) = getCFTypeCons args
-        | Nothing => throw $ InternalError "Unsupported type in ffi."
-    let Just retCon = getCFTypeCon ret
-        | Nothing => throw $ InternalError "Unsupported type in ffi."
-    ret <- newVar
-    bindArgs argCons vs $ \vs' =>
-        case retCon of
-            Nothing => pure $ SimpleExp $ App op vs'
-            Just retCon' =>
-                pure $ Bind (VVar ret) (App op vs')
-                     $ SimpleExp $ Pure $ ConstTagNode retCon' [SVar ret]
+    Core (Def GName)
+mkFFIWrapper fn args ret@(CFIORes innerRet) op = do
+    vs <- traverse (\_ => newVar) args
+    exp <- bindArgsWithWorld args vs $ \vs', world => do
+        res <- newVar
+        let res' = if isUnit innerRet then SLit (LInt 0) else SVar res
+        wres <- newVar
+        pure $ Bind (VVar res) (App op vs')
+             $ Bind (VVar wres) (Pure $ ConstTagNode (getCFTypeCon ret) [res'])
+             $ SimpleExp $ Pure $ ConstTagNode ioResTag [SVar world, SVar wres]
+    pure $ mkDef fn vs exp
+  where
+    isUnit : CFType -> Bool
+    isUnit CFUnit = True
+    isUnit _ = False
+
+mkFFIWrapper fn args ret op = do
+    vs <- traverse (\_ => newVar) args
+    let argCons = getCFTypeCons args
+    exp <- bindArgs argCons vs $ \vs' => do
+        res <- newVar
+        pure $ Bind (VVar res) (App op vs')
+             $ SimpleExp $ Pure $ ConstTagNode (getCFTypeCon ret) [SVar res]
+    pure $ mkDef fn vs exp

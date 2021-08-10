@@ -14,11 +14,6 @@ import GRIN.AST
 %default total
 
 export
-forget : Vect h a -> List a
-forget [] = []
-forget (x :: xs) = x :: forget xs
-
-export
 replicate : Nat -> Core a -> Core (List a)
 replicate 0 _ = pure []
 replicate (S k) act = [| act :: replicate k act |]
@@ -443,22 +438,22 @@ getCFType = \case
     CFUser _ _ => Nothing
 
 export
-getFFIType : List CFType -> CFType -> Either String (Nat, FuncType GName)
+getFFIType : List CFType -> CFType -> Either String (FuncType GName)
 getFFIType args ret = do
-    (ar, argsTy) <- getCFTypes args
-    pure (ar, MkFuncType argsTy !(getCFTypeEither ret))
+    argsTy <- getCFTypes args
+    pure (MkFuncType argsTy !(getCFTypeEither ret))
   where
     getCFTypeEither : CFType -> Either String (GType GName)
     getCFTypeEither ty = case getCFType ty of
         Just ty' => Right ty'
         Nothing => Left $ assert_total $ show ty
 
-    getCFTypes : List CFType -> Either String (Nat, List (GType GName))
-    getCFTypes [] = Right (0, [])
+    getCFTypes : List CFType -> Either String (List (GType GName))
+    getCFTypes [] = Right []
     getCFTypes (CFWorld :: tys) = getCFTypes tys
     getCFTypes (ty :: tys) = do
         ty' <- getCFTypeEither ty
-        bimap S (ty' ::) <$> getCFTypes tys
+        (ty' ::) <$> getCFTypes tys
 
 export
 isEff : CFType -> Effectful
