@@ -1,9 +1,0 @@
-package Grin
-
-modules = LLVM.Pretty, LLVM.AST, GRIN.Var, GRIN.ToLLVM, GRIN.PrettyCompatB, GRIN.PrettyCompat, GRIN.Pretty, GRIN.Pipeline, GRIN.Parser, GRIN.Name, GRIN.GrinState, GRIN.GrinM, GRIN.Error, GRIN.AST, GRIN.Opts.UnusedParameterElim, GRIN.Opts.UnusedFunctionElim, GRIN.Opts.UnusedConstructorElim, GRIN.Opts.NormaliseBind, GRIN.Opts.Inline, GRIN.Opts.CopyPropogation, GRIN.Opts.CaseSimplify, GRIN.Analysis.MaxVar, GRIN.Analysis.Inline, GRIN.Analysis.CallGraph, Data.String.Utils, Data.String.Builder, Data.SortedMap.Extra 
-depends = contrib 
-
-sourcedir = "src"
-builddir = "../build"
-
-version = 0.0.1
