@@ -126,6 +126,7 @@ getCFTypeCon : CFType -> Maybe (Maybe (Tag GName))
 getCFTypeCon = \case
     CFUnit => Just Nothing
     CFInt => just2 intTag
+    CFInteger => just2 integerTag
     CFInt8 => just2 int8Tag
     CFInt16 => just2 int16Tag
     CFInt32 => just2 int32Tag
@@ -140,6 +141,7 @@ getCFTypeCon = \case
     CFPtr => just2 $ MkTag Con $ GrinName PtrVar
     CFGCPtr => just2 $ MkTag Con $ GrinName PtrVar
     CFBuffer => just2 $ MkTag Con $ GrinName PtrVar
+    CFForeignObj => just2 $ MkTag Con $ GrinName PtrVar
     CFWorld => just2 $ MkTag Con $ GrinName PtrVar
     CFFun _ _ => Nothing
     CFIORes ty => assert_total $ getCFTypeCon ty

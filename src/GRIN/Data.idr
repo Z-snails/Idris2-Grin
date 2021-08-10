@@ -120,18 +120,19 @@ namespace Instances
         tag StrSubstr = 23
         tag DoubleExp = 24
         tag DoubleLog = 25
-        tag DoubleSin = 26
-        tag DoubleCos = 27
-        tag DoubleTan = 28
-        tag DoubleASin = 29
-        tag DoubleACos = 30
-        tag DoubleATan = 31
-        tag DoubleSqrt = 32
-        tag DoubleFloor = 33
-        tag DoubleCeiling = 34
-        tag (Cast _ _) = 35
-        tag BelieveMe = 36
-        tag Crash = 37
+        tag DoublePow = 26
+        tag DoubleSin = 27
+        tag DoubleCos = 28
+        tag DoubleTan = 29
+        tag DoubleASin = 30
+        tag DoubleACos = 31
+        tag DoubleATan = 32
+        tag DoubleSqrt = 33
+        tag DoubleFloor = 34
+        tag DoubleCeiling = 35
+        tag (Cast _ _) = 36
+        tag BelieveMe = 37
+        tag Crash = 38
 
 public export
 data GrinFn
@@ -140,6 +141,7 @@ data GrinFn
     | ApplyNU
     | Crash
     | Eval
+    | IntegerVar
     | Main
     | Null
     | PtrVar
@@ -151,6 +153,7 @@ Show GrinFn where
     show ApplyNU = "applyNU"
     show Crash = "_prim_crash"
     show Eval = "eval"
+    show IntegerVar = "Integer"
     show Main = "grinMain"
     show Null = "Null"
     show PtrVar = "Ptr"
@@ -163,9 +166,10 @@ grinFnTag = \case
     ApplyNU => 2
     Crash => 3
     Eval => 4
-    Main => 5
-    Null => 6
-    PtrVar => 7
+    IntegerVar => 5
+    Main => 6
+    Null => 7
+    PtrVar => 8
 
 export
 Eq GrinFn where
@@ -233,17 +237,18 @@ Show GName where
             StrAppend => "str_append"
             StrReverse => "str_reverse"
             StrSubstr => "str_substr"
-            DoubleExp => "exp_double"
-            DoubleLog => "exp_log"
-            DoubleSin => "exp_sin"
-            DoubleCos => "exp_cos"
-            DoubleTan => "exp_tan"
-            DoubleASin => "exp_asin"
-            DoubleACos => "exp_acos"
-            DoubleATan => "exp_atan"
-            DoubleSqrt => "exp_sqrt"
-            DoubleFloor => "exp_floor"
-            DoubleCeiling => "exp_ceiling"
+            DoubleExp => "double_exp"
+            DoubleLog => "double_log"
+            DoublePow => "double_pow"
+            DoubleSin => "double_sin"
+            DoubleCos => "double_cos"
+            DoubleTan => "double_tan"
+            DoubleASin => "double_asin"
+            DoubleACos => "double_acos"
+            DoubleATan => "double_atan"
+            DoubleSqrt => "double_sqrt"
+            DoubleFloor => "double_floor"
+            DoubleCeiling => "double_ceiling"
             Cast from to => fastConcat ["cast_", show from, "_", show to]
             BelieveMe => "believe_me"
             Crash => "crash"
@@ -415,6 +420,7 @@ getCFType : CFType -> Maybe (GType GName)
 getCFType = \case
     CFUnit => Just $ SimpleType UnitTy
     CFInt => Just $ SimpleType $ IntTy $ Signed 64
+    CFInteger => Just $  TyVar $ GrinName IntegerVar
     CFInt8 => Just $ SimpleType $ IntTy $ Signed 8
     CFInt16 => Just $ SimpleType $ IntTy $ Signed 16
     CFInt32 => Just $ SimpleType $ IntTy $ Signed 32
@@ -429,6 +435,7 @@ getCFType = \case
     CFPtr => Just $ TyVar $ GrinName PtrVar
     CFGCPtr => Just $ TyVar $ GrinName PtrVar
     CFBuffer => Just $ TyVar $ GrinName PtrVar
+    CFForeignObj => Just $ TyVar $ GrinName PtrVar
     CFWorld => Just $ TyVar $ GrinName PtrVar
     CFFun _ _ => Nothing
     CFIORes ty => assert_total $ getCFType ty
