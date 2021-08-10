@@ -60,6 +60,8 @@ extra-deps:
 flags:
   llvm-hs:
     shared-llvm: true
+  grin:
+    with-llvm-hs: false
 
 # Extra package databases containing global packages
 # extra-package-dbs: []

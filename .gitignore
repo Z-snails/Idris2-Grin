@@ -10,6 +10,6 @@ test.grin
 # haskell/stack
 grinIdris2/.stack-work/
 grinIdris2/*~
-grinIdris2/stack.yaml.lock
+stack.yaml.lock
 # inigo
 .inigo-work
