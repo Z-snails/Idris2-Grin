@@ -46,7 +46,7 @@ storeAVar (ALocal i) = do
         Just v => if contains v ptrs
             then pure $ Pure $ VVar v
             else pure $ Store $ VVar v
-storeAVar ANull = pure $ Pure nullVal
+storeAVar ANull = pure $ Store nullVal
 
 newAVar :
     Ref NextVar Var =>
@@ -177,10 +177,10 @@ anfToExp (ACon _ con _ _ args) =
 
 anfToExp (AOp _ Nothing op args) =
     storeAVarsVect args $ \vs => pure $ mkSimpleExp
-        $ App (PrimName op) (forget vs)
+        $ App (PrimName op) (toList vs)
 anfToExp (AOp _ (Just lazy) op args) =
     fetchAVarsVect args $ \vs => pure $ mkSimpleExp
-        $ Pure $ mkLazyThunk lazy (PrimName op) (SVar <$> forget vs)
+        $ Pure $ mkLazyThunk lazy (PrimName op) (SVar <$> toList vs)
 
 anfToExp (AExtPrim fc lazy fn args) = assert_total $ anfToExp (AAppName fc lazy fn args)
 
@@ -401,14 +401,13 @@ anfDef con (MkACon _ ar _) =
 anfDef fn (MkAForeign ccs args ret) = do
     let Just primFn = getCC ccs
         | Nothing => throw $ InternalError $ "No supported calling conventions."
-    let Right (ar, type) = getFFIType args ret
+    let Right type = getFFIType args ret
         | Left err => throw $ InternalError $ "Unsupported ffi type " ++ err ++ "."
     let prim = FFI
     let eff = isEff ret
     addExtern $ MkExtern { extName = FFIName primFn, type, prim, eff }
-    vs <- replicate ar newVar
-    wrap <- mkFFIWrapper args ret (FFIName primFn) vs
-    addDef $ mkDef (IdrName fn) vs wrap
+    wrap <- mkFFIWrapper (IdrName fn) args ret (FFIName primFn)
+    addDef wrap
 
 anfDef fn e@(MkAError exp) = anfDef fn (assert_smaller e $ MkAFun [] exp)
 
