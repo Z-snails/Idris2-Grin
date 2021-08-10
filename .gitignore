@@ -1,5 +1,3 @@
-# my stuff
-old
 # idris
 build
 # vscode
@@ -13,3 +11,5 @@ test.grin
 grinIdris2/.stack-work/
 grinIdris2/*~
 grinIdris2/stack.yaml.lock
+# inigo
+.inigo-work
