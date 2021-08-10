@@ -141,6 +141,7 @@ data GrinFn
     | ApplyNU
     | Crash
     | Eval
+    | IntegerVar
     | Main
     | Null
     | PtrVar
@@ -152,6 +153,7 @@ Show GrinFn where
     show ApplyNU = "applyNU"
     show Crash = "_prim_crash"
     show Eval = "eval"
+    show IntegerVar = "Integer"
     show Main = "grinMain"
     show Null = "Null"
     show PtrVar = "Ptr"
@@ -164,9 +166,10 @@ grinFnTag = \case
     ApplyNU => 2
     Crash => 3
     Eval => 4
-    Main => 5
-    Null => 6
-    PtrVar => 7
+    IntegerVar => 5
+    Main => 6
+    Null => 7
+    PtrVar => 8
 
 export
 Eq GrinFn where
@@ -417,7 +420,7 @@ getCFType : CFType -> Maybe (GType GName)
 getCFType = \case
     CFUnit => Just $ SimpleType UnitTy
     CFInt => Just $ SimpleType $ IntTy $ Signed 64
-    CFInteger => Just $  TyVar $ GrinName PtrVar
+    CFInteger => Just $  TyVar $ GrinName IntegerVar
     CFInt8 => Just $ SimpleType $ IntTy $ Signed 8
     CFInt16 => Just $ SimpleType $ IntTy $ Signed 16
     CFInt32 => Just $ SimpleType $ IntTy $ Signed 32
