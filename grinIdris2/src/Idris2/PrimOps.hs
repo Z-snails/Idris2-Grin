@@ -13,6 +13,7 @@ ffi pure
     _prim_add_Integer :: %Integer -> %Integer -> %Integer
     _prim_sub_Integer :: %Integer -> %Integer -> %Integer
     _prim_cast_String_Integer :: T_String -> %Integer
+    _prim_str_append :: T_String -> T_String -> T_String
 
 primop pure
     _prim_add_Int :: T_Int64 -> T_Int64 -> T_Int64
