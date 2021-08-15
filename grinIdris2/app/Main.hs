@@ -52,9 +52,6 @@ help = unlines
     , "  --save-llvm <file>     save llvm to file."
     ]
 
--- evalPlugin :: EvalPlugin
--- evalPlugin
-
 main :: IO ()
 main = do
     args <- getArgs
