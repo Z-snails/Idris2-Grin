@@ -98,6 +98,7 @@ compileExpr post d tmpDir outDir term outFile = do
             , SaveGrin saveIR (mkGrinFile "006_unused_parameter")
             , O CaseSimplify
             , SaveGrin saveIR (mkGrinFile "007_case_simplify")
+            , O UnusedFunctionElim
             , O NormaliseBind
             , SaveCalls saveIR (appDir </> "calls_graph")
             , SaveCalledBy saveIR (appDir </> "called_by_graph")
