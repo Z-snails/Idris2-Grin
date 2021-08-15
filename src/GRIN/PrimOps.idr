@@ -136,7 +136,7 @@ export
 primCons :
     Ref NextVar Var =>
     (ptr : Var) -> Core (List (Alt GName))
-primCons _ = traverse mkPrimAlt cons
+primCons _ = [| miscPrimAlts ++ traverse mkPrimAlt cons |]
   where
     cons : List Constant
     cons =
@@ -151,6 +151,10 @@ primCons _ = traverse mkPrimAlt cons
     mkPrimAlt c = do
         v <- newVar
         pure $ MkAlt (getConstantNodePat v c) $ SimpleExp $ Pure $ wrapConstant v c
+    miscPrimAlts : Core (List (Alt GName))
+    miscPrimAlts = pure
+        [ MkAlt (NodePat nullTag []) $ SimpleExp $ Pure $ ConstTagNode nullTag []
+        ]
 
 getCFTypeCon : CFType -> Tag GName
 getCFTypeCon CFUnit = intTag
@@ -223,10 +227,8 @@ mkFFIWrapper fn args ret@(CFIORes innerRet) op = do
     exp <- bindArgsWithWorld args vs $ \vs', world => do
         res <- newVar
         let res' = if isUnit innerRet then SLit (LInt 0) else SVar res
-        wres <- newVar
         pure $ Bind (VVar res) (App op vs')
-             $ Bind (VVar wres) (Pure $ ConstTagNode (getCFTypeCon ret) [res'])
-             $ SimpleExp $ Pure $ ConstTagNode ioResTag [SVar world, SVar wres]
+             $ SimpleExp $ Pure $ ConstTagNode (getCFTypeCon ret) [res']
     pure $ mkDef fn vs exp
   where
     isUnit : CFType -> Bool
