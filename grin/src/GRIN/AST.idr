@@ -578,13 +578,18 @@ export %inline
 mapExpDef : (Exp name -> Exp name) -> Def name -> Def name
 mapExpDef f (MkDef n as b ty) = MkDef n as (f b) ty
 
-public export data ExternPrim = Primop | FFI
+public export
+data ExternPrim = Primop | FFI
+
 export
 Eq ExternPrim where
     Primop == Primop = True
     FFI == FFI = True
     _ == _ = False
-public export data Effectful = NoEffect | Effect
+
+public export
+data Effectful = NoEffect | Effect
+
 export
 Eq Effectful where
     NoEffect == NoEffect = True
