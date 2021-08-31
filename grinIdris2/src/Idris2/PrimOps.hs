@@ -28,7 +28,6 @@ primop pure
 
 ffi effectful
     _prim_clear_Integer :: %Integer -> T_Unit
-    _prim_print_String :: T_String -> T_Unit
 
 _prim_believe_me p0 =
     pure p0

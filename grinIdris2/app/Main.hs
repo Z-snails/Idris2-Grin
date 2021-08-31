@@ -23,6 +23,7 @@ idris2Opts :: FilePath -> [String] -> PipelineOpts
 idris2Opts outDir opts = parseOpts opts $ defaultOpts
     { _poOutputDir = outDir
     , _poLogging = False
+    , _poFailOnLint = False
     }
 
 postPipeline :: [String] -> [PipelineStep]
