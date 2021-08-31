@@ -21,51 +21,52 @@ replicate (S k) act = [| act :: replicate k act |]
 -- missing instances
 namespace Instances
     export
+    constantTag : Constant -> Int
+    constantTag (I _) = 0
+    constantTag (I8 _) = 1
+    constantTag (I16 _) = 2
+    constantTag (I32 _) = 3
+    constantTag (I64 _) = 4
+    constantTag (BI _) = 5
+    constantTag (B8 _) = 6
+    constantTag (B16 _) = 7
+    constantTag (B32 _) = 8
+    constantTag (B64 _) = 9
+    constantTag (Str _) = 10
+    constantTag (Ch _) = 11
+    constantTag (Db _) = 12
+    constantTag WorldVal = 13
+    constantTag IntType = 14
+    constantTag Int8Type = 15
+    constantTag Int16Type = 16
+    constantTag Int32Type = 17
+    constantTag Int64Type = 18
+    constantTag IntegerType = 19
+    constantTag Bits8Type = 20
+    constantTag Bits16Type = 21
+    constantTag Bits32Type = 22
+    constantTag Bits64Type = 23
+    constantTag StringType = 24
+    constantTag CharType = 25
+    constantTag DoubleType = 26
+    constantTag WorldType = 27
+
+    export
     Ord Constant where
-        compare (I x) (I y) = compare x y
-        compare (I8 x) (I8 y) = compare x y
-        compare (I16 x) (I16 y) = compare x y
-        compare (I32 x) (I32 y) = compare x y
-        compare (I64 x) (I64 y) = compare x y
-        compare (BI x) (BI y) = compare x y
-        compare (B8 x) (B8 y) = compare x y
-        compare (B16 x) (B16 y) = compare x y
-        compare (B32 x) (B32 y) = compare x y
-        compare (B64 x) (B64 y) = compare x y
-        compare (Str x) (Str y) = compare x y
-        compare (Ch x) (Ch y) = compare x y
-        compare (Db x) (Db y) = compare x y
-        compare x y = tag x `compare` tag y
-          where
-            tag : Constant -> Int
-            tag (I _) = 0
-            tag (I8 _) = 1
-            tag (I16 _) = 2
-            tag (I32 _) = 3
-            tag (I64 _ ) = 4
-            tag (BI _) = 5
-            tag (B8 _) = 6
-            tag (B16 _) = 7
-            tag (B32 _) = 8
-            tag (B64 _) = 9
-            tag (Str _) = 10
-            tag (Ch _) = 11
-            tag (Db _) = 12
-            tag WorldVal = 13
-            tag IntType = 14
-            tag Int8Type = 15
-            tag Int16Type = 16
-            tag Int32Type = 17
-            tag Int64Type = 18
-            tag IntegerType = 18
-            tag Bits8Type = 19
-            tag Bits16Type = 20
-            tag Bits32Type = 21
-            tag Bits64Type = 22
-            tag StringType = 23
-            tag CharType = 24
-            tag DoubleType = 25
-            tag WorldType = 26
+        I x `compare` I y = compare x y
+        I8 x `compare` I8 y = compare x y
+        I16 x `compare` I16 y = compare x y
+        I32 x `compare` I32 y = compare x y
+        I64 x `compare` I64 y = compare x y
+        BI x `compare` BI y = compare x y
+        B8 x `compare` B8 y = compare x y
+        B16 x `compare` B16 y = compare x y
+        B32 x `compare` B32 y = compare x y
+        B64 x `compare` B64 y = compare x y
+        Str x `compare` Str y = compare x y
+        Ch x `compare` Ch y = compare x y
+        Db x `compare` Db y = compare x y
+        compare x y = compare (constantTag x) (constantTag y)
 
     export
     cmpPrimFn : PrimFn n -> PrimFn m -> Ordering
@@ -155,16 +156,15 @@ Show GrinFn where
 
 %inline
 grinFnTag : GrinFn -> Int
-grinFnTag = \case
-    Apply => 0
-    ApplyU => 1
-    ApplyNU => 2
-    Crash => 3
-    Eval => 4
-    IntegerVar => 5
-    Main => 6
-    Null => 7
-    PtrVar => 8
+grinFnTag Apply = 0
+grinFnTag ApplyU = 1
+grinFnTag ApplyNU = 2
+grinFnTag Crash = 3
+grinFnTag Eval = 4
+grinFnTag IntegerVar = 5
+grinFnTag Main = 6
+grinFnTag Null = 7
+grinFnTag PtrVar = 8
 
 export
 Eq GrinFn where
@@ -287,7 +287,7 @@ Eq GName where
     GrinName n == GrinName m = n == m
     PrimName o == PrimName p = cmpPrimFn o p == EQ
     PrimFunc o == PrimFunc p = cmpPrimFn o p == EQ
-    ConstName c == ConstName d = c == d
+    ConstName c == ConstName d = constantTag c == constantTag d
     _ == _ = False
 
 export
@@ -297,7 +297,7 @@ Ord GName where
     GrinName n `compare` GrinName m = n `compare` m
     PrimName n `compare` PrimName m = n `cmpPrimFn` m
     PrimFunc n `compare` PrimFunc m = n `cmpPrimFn` m
-    ConstName c `compare` ConstName d = c `compare` d
+    ConstName c `compare` ConstName d = constantTag c `compare` constantTag d
     n `compare` m = tag n `compare` tag m
       where
         tag : GName -> Int
@@ -383,12 +383,29 @@ getConstantNodePat v = constant
 export
 anfConstant : Constant -> Val GName
 anfConstant = constant
-    (\c, x => ConstTagNode (MkTag Con (ConstName c)) [SLit $ LInt x])
-    (\c, x => ConstTagNode (MkTag Con (ConstName c)) [SLit $ LInt $ cast x])
-    (\c, x => ConstTagNode (MkTag Con (ConstName c)) [SLit $ LString x])
-    (\c, x => ConstTagNode (MkTag Con (ConstName c)) [SLit $ LChar x])
-    (\c, x => ConstTagNode (MkTag Con (ConstName c)) [SLit $ LDouble x])
+    (\c, x => ConstTagNode (MkTag Con (ConstName (removeVal c))) [SLit $ LInt x])
+    (\c, x => ConstTagNode (MkTag Con (ConstName (removeVal c))) [SLit $ LInt $ cast x])
+    (\c, x => ConstTagNode (MkTag Con (ConstName (removeVal c))) [SLit $ LString x])
+    (\c, x => ConstTagNode (MkTag Con (ConstName (removeVal c))) [SLit $ LChar x])
+    (\c, x => ConstTagNode (MkTag Con (ConstName (removeVal c))) [SLit $ LDouble x])
     (\c => ConstTagNode (MkTag Con (ConstName c)) [])
+  where
+    removeVal : Constant -> Constant
+    removeVal (I x) = I 0
+    removeVal (I8 x) = I8 0
+    removeVal (I16 x) = I16 0
+    removeVal (I32 x) = I32 0
+    removeVal (I64 x) = I64 0
+    removeVal (BI x) = BI 0
+    removeVal (B8 x) = B8 0
+    removeVal (B16 x) = B16 0
+    removeVal (B32 x) = B32 0
+    removeVal (B64 x) = B64 0
+    removeVal (Str x) = Str ""
+    removeVal (Ch x) = Ch '\0'
+    removeVal (Db x) = Db 0
+    removeVal x = x
+
 
 export
 unwrapConstant : Var -> Constant -> Val GName

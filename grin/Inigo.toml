@@ -16,6 +16,7 @@ modules=[
     "GRIN.Opts.UnusedConstructorElim",
     "GRIN.Opts.UnusedFunctionElim",
     "GRIN.Opts.UnusedParameterElim",
+    "GRIN.Opts.UnusedVarElim",
     "GRIN.AST",
     "GRIN.Error",
     "GRIN.GrinM",

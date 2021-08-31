@@ -61,6 +61,7 @@ invalidate t = modify $ case t of
     CallsGraph => record { calls = Nothing }
     CalledByGraph => record { calledBy = Nothing }
     CallGraphs => record { calls = Nothing, calledBy = Nothing }
+    Effects => record { effectMap = Nothing }
 
 export
 getCalls : Monad m => Ord name => GrinT name m (CallGraph name)
@@ -84,7 +85,7 @@ getCalledBy = do
 
 export
 liftGrinM : (forall a. m1 a -> m2 a) -> GrinT name m1 a -> GrinT name m2 a
-liftGrinM f (MkGrinM (ST m)) = MkGrinM $ ST \st => f $ m st
+liftGrinM f (MkGrinM (ST m)) = MkGrinM $ ST $ \st => f $ m st
 
 export
 newError : Monad m => Error -> GrinT name m ()

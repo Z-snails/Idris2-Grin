@@ -21,6 +21,7 @@ import GRIN.Opts.NormaliseBind
 import GRIN.Opts.UnusedConstructorElim
 import GRIN.Opts.UnusedFunctionElim
 import GRIN.Opts.UnusedParameterElim
+import GRIN.Opts.UnusedVarElim
 
 public export
 data Optimise name
@@ -33,6 +34,7 @@ data Optimise name
     | UnusedConstructorElim
     | UnusedFunctionElim
     | UnusedParamElim
+    | UnusedVarElim
     | Fix (List (Optimise name))
 
 Show name => Show (Optimise name) where
@@ -45,13 +47,14 @@ Show name => Show (Optimise name) where
     show UnusedConstructorElim = "unused constructor elimintation"
     show UnusedFunctionElim = "unused function elimination"
     show UnusedParamElim = "unused parameter elimination"
+    show UnusedVarElim = "unused variable elimination"
     show (Fix os) = "fix " ++ show os
 
 export
-runOpts : Monad m => Ord name => List (Optimise name) -> GrinT name m ()
+runOpts : Show name => Monad m => Ord name => List (Optimise name) -> GrinT name m ()
 
 export
-runOpt : Monad m => Ord name => Optimise name -> GrinT name m ()
+runOpt : Show name => Monad m => Ord name => Optimise name -> GrinT name m ()
 runOpt CaseSimplify = caseSimplify
 runOpt CopyPropogation = copyProp
 runOpt InlineSimpleDef = do
@@ -70,6 +73,7 @@ runOpt NormaliseBind = normaliseBind
 runOpt UnusedConstructorElim = unusedConsElim
 runOpt UnusedFunctionElim = unusedFuncElim
 runOpt UnusedParamElim = unusedParamElim
+runOpt UnusedVarElim = unusedVarElim
 runOpt s@(Fix ss) = do
     p0 <- gets prog
     runOpts ss

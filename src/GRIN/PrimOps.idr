@@ -143,10 +143,7 @@ primCons _ = [| miscPrimAlts ++ traverse mkPrimAlt cons |]
         [I 0, I8 0, I16 0, I32 0,
          I64 0, BI 0, B8 0, B16 0,
          B32 0, B64 0, Str "", Ch '\0',
-         Db 0.0, WorldVal, IntType, Int8Type,
-         Int16Type, Int32Type, Int64Type, IntegerType,
-         Bits8Type, Bits16Type, Bits32Type, Bits64Type,
-         StringType, CharType, DoubleType, WorldType]
+         Db 0.0, WorldVal]
     mkPrimAlt : Constant -> Core (Alt GName)
     mkPrimAlt c = do
         v <- newVar
@@ -204,7 +201,7 @@ bindArgsWithWorld tys args f = doBind tys args Nothing $ handleNoWorld f
     doBind (ty :: tys) (arg :: args) world k = do
         v <- newVar
         rest <- doBind tys args world (k . (v ::))
-        pure $ Bind (ConstTagNode (getCFTypeCon ty) [SVar v]) (Pure $ VVar arg)
+        pure $ Bind (ConstTagNode (getCFTypeCon ty) [SVar v]) (App (GrinName Eval) [arg])
              rest
     doBind _ _ _ _ = throw $ InternalError "Mismatch between number of arguments and number of types"
 

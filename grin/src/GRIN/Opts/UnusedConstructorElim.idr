@@ -1,11 +1,17 @@
 module GRIN.Opts.UnusedConstructorElim
 
 import Data.List
-import Data.SortedSet
+import Data.SortedSet as Set
 import Data.SortedMap
 
 import GRIN.AST
 import GRIN.GrinM
+
+Show name => Show (Tag name) where
+    show (MkTag Con tag) = "C" ++ show tag
+    show (MkTag UThunk tag) = "U" ++ show tag
+    show (MkTag NUThunk tag) = "NU" ++ show tag
+    show (MkTag (Partial k) tag) = "P" ++ show k ++ show tag
 
 collectVal : Ord name => Val name -> SortedSet (Tag name)
 collectVal (ConstTagNode t _) = singleton t
@@ -33,7 +39,7 @@ mutual
 collectDef : Ord name => Def name -> SortedSet (Tag name)
 collectDef = collectExp . body
 
-removeExp : Ord name => SortedSet (Tag name) -> Exp name -> Exp name
+removeExp : Show name => SortedSet (Tag name) -> Exp name -> Exp name
 removeExp cons (SimpleExp e) = SimpleExp $ mapExpSExp (removeExp cons) e
 removeExp cons (Bind val rhs rest) = Bind val (mapExpSExp (removeExp cons) rhs) $ removeExp cons rest
 removeExp cons (Case val alts) = Case val $ filter pred alts
@@ -44,7 +50,7 @@ removeExp cons (Case val alts) = Case val $ filter pred alts
         Nothing => True
 
 export
-unusedConsElim : Monad m => Ord name => GrinT name m ()
+unusedConsElim : Show name => Monad m => Ord name => GrinT name m ()
 unusedConsElim = do
     p@(MkProg exts defs _) <- gets prog
     let used = foldMap collectDef defs

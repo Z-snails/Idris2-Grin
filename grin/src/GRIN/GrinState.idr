@@ -8,9 +8,13 @@ import GRIN.AST
 import GRIN.Error
 import GRIN.Analysis.MaxVar
 
-public export
-0 CallGraph : Type -> Type
+public export 0
+CallGraph : Type -> Type
 CallGraph name = SortedMap name (SortedSet name)
+
+public export 0
+EffectMap : Type -> Type
+EffectMap name = SortedMap name Bool
 
 public export
 record GrinState name where
@@ -18,6 +22,7 @@ record GrinState name where
     prog : Prog name
     calls : Maybe (CallGraph name)
     calledBy : Maybe (CallGraph name)
+    effectMap : Maybe (EffectMap name)
     toInline : SortedMap name (Def name) -- should have all fetch ids removed
     errors : List Error
     varMap : SortedMap Var Var
@@ -33,6 +38,7 @@ newGrinState prog = MkGrinState
     { prog
     , calls = Nothing
     , calledBy = Nothing
+    , effectMap = Nothing
     , toInline = empty
     , errors = []
     , varMap = empty
@@ -44,3 +50,4 @@ data AnalysisTag
     = CallsGraph
     | CalledByGraph
     | CallGraphs
+    | Effects

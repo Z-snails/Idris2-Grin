@@ -35,7 +35,7 @@ tagTypeToNat : TagType -> Nat
 tagTypeToNat Con = 0
 tagTypeToNat UThunk = 1
 tagTypeToNat NUThunk = 2
-tagTypeToNat (Partial k) = 3 + k
+tagTypeToNat (Partial k) = k + 3
 
 export
 Eq TagType where

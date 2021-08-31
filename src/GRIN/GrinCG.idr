@@ -10,6 +10,7 @@ import Compiler.Common
 
 import Data.String.Builder
 import Data.String
+import Data.SortedSet as Set
 
 import Libraries.Utils.Path
 
@@ -42,6 +43,10 @@ getDoStats : List String -> Bool
 getDoStats [] = False
 getDoStats (d :: ds) = trim d == "stats" || getDoStats ds
 
+getDoLog : List String -> Bool
+getDoLog [] = False
+getDoLog (d :: ds) = trim d == "logging" || getDoLog ds 
+
 ShowB GName where
     showB = showB @{FromShow}
 
@@ -59,6 +64,11 @@ compileExpr :
     (outFile : String) ->
     Core (Maybe String)
 compileExpr post d tmpDir outDir term outFile = do
+
+    coreLift $ putStrLn $ unlines
+        [ "Str elem?: \{show $ Set.contains (MkTag Con $ ConstName $ Str "") set}"
+        ]
+
     let appDir = outDir </> outFile ++ "_app"
         mkGrinFile = \f => appDir </> f <.> "grin"
         outGrinFile = mkGrinFile outFile
@@ -85,19 +95,21 @@ compileExpr post d tmpDir outDir term outFile = do
             , SaveGrin saveIR (mkGrinFile "001_bind_normalise")
             , O CopyPropogation
             , SaveGrin saveIR (mkGrinFile "002_copy_prop")
-            , O InlineSimpleDef
-            , SaveGrin saveIR (mkGrinFile "003_inline_simple")
+            -- , O InlineSimpleDef
+            -- , SaveGrin saveIR (mkGrinFile "003_inline_simple")
             , O $ Fix
                 [ UnusedFunctionElim
                 , UnusedConstructorElim
                 ]
             , SaveGrin saveIR (mkGrinFile "004_unused_function_constructor")
-            , O  $ InlineUsedOnce
-            , SaveGrin saveIR (mkGrinFile "005_inline_used_once")
+            -- , O  $ InlineUsedOnce
+            -- , SaveGrin saveIR (mkGrinFile "005_inline_used_once")
             , O $ Fix [ UnusedParamElim ]
             , SaveGrin saveIR (mkGrinFile "006_unused_parameter")
             , O CaseSimplify
             , SaveGrin saveIR (mkGrinFile "007_case_simplify")
+            , O UnusedVarElim
+            , SaveGrin saveIR (mkGrinFile "008_unused_var_elim")
             , O UnusedFunctionElim
             , O NormaliseBind
             , SaveCalls saveIR (appDir </> "calls_graph")
@@ -115,6 +127,7 @@ compileExpr post d tmpDir outDir term outFile = do
         | errs => throw $ InternalError $ "Error running optimisations\n" ++ show errs
 
     doLog <- unverifiedLogging "grin" 10
+    let doLog = doLog || getDoLog ds
 
     let grinc = "grinIdris2-exe"
     let grinCMD =
@@ -140,6 +153,7 @@ executeExpr :
     (tmpDir : String) ->
     ClosedTerm -> Core ()
 executeExpr d tmpDir term = do
+    addDirective "grin" "logging"
     ds <- getDirectives (Other "grin")
     if getDoStats ds
         then ignore $ compileExpr EvalWithStats d tmpDir tmpDir term "execute"
