@@ -121,23 +121,23 @@ mutual
         show pat ++ " ->\n"
         ++ indent (i + 1) (showBExp (i + 1) exp)
 
-export
+export covering
 Show name => Show (SExp name) where
     show = showBSExp 0
 
-export
+export covering
 Show name => Show (Exp name) where
     show = showBExp 0
 
-export
+export covering
 Show name => Show (Alt name) where
     show = showBAlt 0
 
-export
+export covering
 Show name => Show (Def name) where
     show (MkDef fn args exp _) = function fn args ++ " =\n" ++ indent 1 (showBExp 1 exp)
 
-export
+export covering
 Show name => Show (Prog name) where
     show (MkProg exts defs _) =
         -- show externs

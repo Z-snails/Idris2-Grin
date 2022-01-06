@@ -2,6 +2,7 @@ module GRIN.PrimOps
 
 import Data.Vect
 
+import Core.Context.Context
 import Core.CompileExpr
 import Core.Core
 import Core.Name
@@ -70,9 +71,6 @@ charTag : Tag GName
 charTag = mkConstTag $ Ch '\0'
 doubleTag : Tag GName
 doubleTag = mkConstTag $ Db 0.0
-
-ioResTag : Tag GName
-ioResTag = MkTag Con $ IdrName $ NS primIONS $ UN "MkIORes"
 
 intTags : List (Constant, Tag GName)
 intTags =

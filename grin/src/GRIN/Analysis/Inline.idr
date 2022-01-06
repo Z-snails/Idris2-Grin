@@ -1,7 +1,6 @@
 module GRIN.Analysis.Inline
 
 import Data.List
-import Data.Num.Implementations
 import Data.SortedMap as Map
 import Data.SortedMap.Extra
 import Data.SortedSet as Set

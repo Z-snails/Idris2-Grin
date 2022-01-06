@@ -406,7 +406,7 @@ fetchI = FetchI Nothing
 mutual
     export
     Eq name => Eq (SExp name) where
-        Do e1 == Do e2 = e1 == e2
+        Do e1 == Do e2 = assert_total $ e1 == e2
         App f1 as1 == App f2 as2 = as1 == as2 && f1 == f2
         Pure x == Pure y = x == y
         Store x == Store y = x == y
@@ -419,10 +419,10 @@ mutual
     Eq name => Eq (Exp name) where
         SimpleExp e1 == SimpleExp e2 = e1 == e2
         Bind v1 rhs1 rest1 == Bind v2 rhs2 rest2 = v1 == v2 && rhs1 == rhs2 && rest1 == rest2
-        Case v1 alts1 == Case v2 alts2 = v1 == v2 && alts1 == alts2
+        Case v1 alts1 == Case v2 alts2 = v1 == v2 && assert_total (alts1 == alts2)
         _ == _ = False
 
-    export
+    export covering
     Eq name => Eq (Alt name) where
         MkAlt p1 e1 == MkAlt p2 e2 = p1 == p2 && e1 == e2
 
@@ -597,25 +597,49 @@ Eq Effectful where
     _ == _ = False
 
 public export
+data OS = Darwin | FreeBSD | Linux | Android | MinGW | Win | NetBSD | OpenBSD
+
+namespace OS
+    osToInt : OS -> Int
+    osToInt Darwin = 0
+    osToInt FreeBSD = 1
+    osToInt Linux = 2
+    osToInt Android = 3
+    osToInt MinGW = 4
+    osToInt Win = 5
+    osToInt NetBSD = 6
+    osToInt OpenBSD = 7
+
+    export
+    Eq OS where
+        x == y = osToInt x == osToInt y
+
+    export
+    Ord OS where
+        compare x y = osToInt x `compare` osToInt y
+
+public export
 record Extern name where
     constructor MkExtern
     extName : name
     type : FuncType name
     prim : ExternPrim
     eff : Effectful
+    libs : List (OS, String)
 
 export
 Eq name => Eq (Extern name) where
-    MkExtern n1 t1 p1 e1 == MkExtern n2 t2 p2 e2 = p1 == p2 && e1 == e2 && n1 == n2 && t1 == t2
+    MkExtern n1 t1 p1 e1 ls1 == MkExtern n2 t2 p2 e2 ls2
+        = p1 == p2 && e1 == e2 && n1 == n2 && t1 == t2 && ls1 == ls2
 
 export
 Functor Extern where
-    map f (MkExtern n ty prim eff) = MkExtern (f n) (map f ty) prim eff
+    map f (MkExtern n ty prim eff libs) = MkExtern (f n) (map f ty) prim eff libs
 
 export
 Foldable Extern where
-    foldl f z (MkExtern n ty _ _) = foldl f (f z n) ty
-    foldr f z (MkExtern n ty _ _) = f n $ foldr f z ty
+    foldl f z (MkExtern n ty _ _ _) = foldl f (f z n) ty
+    foldr f z (MkExtern n ty _ _ _) = f n $ foldr f z ty
 
 infixl 2 <&>
 (<&>) : Functor f => f (a -> b) -> a -> f b
@@ -623,7 +647,7 @@ f <&> x = ($ x) <$> f
 
 export
 Traversable Extern where
-    traverse f (MkExtern n ty prim eff) = [| MkExtern (f n) (traverse f ty) |] <&> prim <&> eff
+    traverse f (MkExtern n ty prim eff libs) = [| MkExtern (f n) (traverse f ty) |] <&> prim <&> eff <&> libs
 
 ||| An entire program.
 public export

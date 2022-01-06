@@ -2,6 +2,7 @@ module GRIN.GrinCG
 
 import Core.Core
 import Core.Context
+import Core.Context.Context
 import Core.Context.Log
 import Core.Directory
 import Core.Options
@@ -47,6 +48,13 @@ getDoLog : List String -> Bool
 getDoLog [] = False
 getDoLog (d :: ds) = trim d == "logging" || getDoLog ds 
 
+getOptimise : List String -> Bool
+getOptimise [] = False
+getOptimise (d :: ds) =
+    trim d == "optimse"
+    || trim d == "optimize"
+    || getOptimise ds
+
 ShowB GName where
     showB = showB @{FromShow}
 
@@ -64,10 +72,6 @@ compileExpr :
     (outFile : String) ->
     Core (Maybe String)
 compileExpr post d tmpDir outDir term outFile = do
-
-    coreLift $ putStrLn $ unlines
-        [ "Str elem?: \{show $ Set.contains (MkTag Con $ ConstName $ Str "") set}"
-        ]
 
     let appDir = outDir </> outFile ++ "_app"
         mkGrinFile = \f => appDir </> f <.> "grin"
@@ -140,6 +144,7 @@ compileExpr post d tmpDir outDir term outFile = do
                     Eval => " --eval"
                     EvalWithStats => " --eval-stats"
                     SaveLLVM => " --save-llvm \"" ++ (outDir </> outFile) ++ "\"")
+            ++ (if doOpts then " --optimise" else "")
 
     unverifiedLogC "grin" 10 $ pure grinCMD
     unless skipCG $ (coreLift $ system grinCMD) >>= \case

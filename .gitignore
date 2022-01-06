@@ -14,3 +14,9 @@ stack.yaml.lock
 # inigo
 .inigo-work
 Inigo.ipkg
+# sirdi
+.build
+depends
+idris2Grin.ipkg
+# cargo
+support/target

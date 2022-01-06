@@ -6,6 +6,7 @@ import Data.SortedSet
 import Data.Nat
 import Data.Vect
 
+import Core.Context.Context
 import Core.Core
 import Core.Name
 import Core.TT
@@ -119,7 +120,7 @@ appLazy : LazyReason -> Var -> Var -> SExp GName
 appLazy LInf = appU
 appLazy _ = appNU
 
-mkLazyThunk : LazyReason -> name -> List SVal -> Val name
+mkLazyThunk : forall name . LazyReason -> name -> List SVal -> Val name
 mkLazyThunk LInf = mkNUThunk
 mkLazyThunk _ = mkUThunk
 
@@ -175,14 +176,20 @@ anfToExp (ACon _ con _ _ args) =
     storeAVars args $ \vs => pure $ mkSimpleExp
         $ Pure $ mkCon (IdrName con) (SVar <$> vs)
 
+anfToExp (AOp _ Nothing BelieveMe [from, to, arg]) = do
+    v <- newVar
+    storeAVarsVect [arg] $ \[var] => pure
+        $ Bind (VVar v) (App (PrimName BelieveMe) [var])
+        $ SimpleExp $ fetch v
+
 anfToExp (AOp _ Nothing op args) =
     storeAVarsVect args $ \vs => pure $ mkSimpleExp
         $ App (PrimName op) (toList vs)
 anfToExp (AOp _ (Just lazy) op args) =
-    fetchAVarsVect args $ \vs => pure $ mkSimpleExp
+    storeAVarsVect args $ \vs => pure $ mkSimpleExp
         $ Pure $ mkLazyThunk lazy (PrimName op) (SVar <$> toList vs)
 
-anfToExp (AExtPrim fc lazy fn args) = assert_total $ anfToExp (AAppName fc lazy fn args)
+anfToExp (AExtPrim fc lazy fn args) = throw $ InternalError "%extern not yet implemented"
 
 anfToExp (AConCase _ av alts def) = do
     vp <- newVar
@@ -399,15 +406,31 @@ anfDef con (MkACon _ ar _) =
         pure $ MkAlt (NodePat tag vs) (mkSimpleExp $ Pure $ ConstTagNode tag (SVar <$> vs))
 
 anfDef fn (MkAForeign ccs args ret) = do
-    let Just primFn = getCC ccs
+    let Just (primFn, lib) = getCC ccs
         | Nothing => throw $ InternalError $ "No supported calling conventions."
     let Right type = getFFIType args ret
         | Left err => throw $ InternalError $ "Unsupported ffi type " ++ err ++ "."
     let prim = FFI
     let eff = isEff ret
-    addExtern $ MkExtern { extName = FFIName primFn, type, prim, eff }
+    let libs = makeLibs lib
+    addExtern $ MkExtern { extName = FFIName primFn, type, prim, eff, libs }
     wrap <- mkFFIWrapper (IdrName fn) args ret (FFIName primFn)
     addDef wrap
+  where
+    getSO : OS -> String
+    getSO Darwin = "dylib"
+    getSO FreeBSD = "so"
+    getSO Linux = "so"
+    getSO Android = "so"
+    getSO MinGW = "dll"
+    getSO Win = "dll"
+    getSO NetBSD = "so"
+    getSO OpenBSD = "so"
+
+    makeLibs : Maybe String -> List (OS, String) -- TODO: check if portable directive is enabled
+    makeLibs Nothing = []
+    makeLibs (Just "libc") = [(Linux, "libc.so.6")] -- TODO: other OSs
+    makeLibs (Just lib) = map (\os => (os, "\{lib}.\{getSO os}")) [Darwin, FreeBSD, Linux, Android, MinGW, Win, NetBSD, OpenBSD]
 
 anfDef fn e@(MkAError exp) = anfDef fn (assert_smaller e $ MkAFun [] exp)
 

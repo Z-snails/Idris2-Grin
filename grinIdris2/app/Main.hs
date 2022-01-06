@@ -15,7 +15,7 @@ import Pipeline.Pipeline
 
 parseOpts :: [String] -> PipelineOpts -> PipelineOpts
 parseOpts [] opt = opt
-parseOpts ("--save-ir" : opts) opt = parseOpts opts opt
+parseOpts ("--save-ir" : opts) opt = parseOpts opts opt -- TODO: only save when enabled
 parseOpts ("--logging" : opts) opt = parseOpts opts $ opt { _poLogging = True }
 parseOpts (_ : opts) opt = parseOpts opts opt
 
@@ -34,9 +34,9 @@ postPipeline ("--eval-stats" : opts) = PureEvalPlugin evalPrimOp True : postPipe
 postPipeline (_ : opts) = postPipeline opts
 
 doOptimise :: [String] -> Bool
-doOptimise [] = True
-doOptimise ("--eval" : opts) = False
-doOptimise ("--eval-stats" : opts) = False
+doOptimise [] = False
+doOptimise ("--optimise" : opts) = True
+doOptimise ("--optimize" : opts) = True
 doOptimise (_ : opts) = doOptimise opts
 
 help :: String
@@ -51,6 +51,7 @@ help = unlines
     , "  --eval                 run pure evaluator"
     , "  --eval-stats           run pure evaluator with statistics"
     , "  --save-llvm <file>     save llvm to file."
+    , "  --optimise, --optimize optimise code" 
     ]
 
 main :: IO ()

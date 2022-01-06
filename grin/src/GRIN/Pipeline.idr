@@ -48,7 +48,7 @@ Show name => Show (Optimise name) where
     show UnusedFunctionElim = "unused function elimination"
     show UnusedParamElim = "unused parameter elimination"
     show UnusedVarElim = "unused variable elimination"
-    show (Fix os) = "fix " ++ show os
+    show (Fix os) = "fix " ++ assert_total (show os)
 
 export
 runOpts : Show name => Monad m => Ord name => List (Optimise name) -> GrinT name m ()

@@ -164,25 +164,37 @@ collectExts = foldl addExtern initExterns
             NoEffect => record { ffiPure $= (ext ::) } exts
             Effect => record { ffiEffectful $= (ext ::) } exts
 
-whenCons : List a -> Lazy Builder -> Builder
-whenCons [] _ = ""
-whenCons xs s = s
+ShowB OS where
+    showB Darwin = "darwin"
+    showB FreeBSD = "freebsd"
+    showB Linux = "linux"
+    showB Android = "android"
+    showB MinGW = "mingw"
+    showB Win = "win"
+    showB NetBSD = "netbsd"
+    showB OpenBSD = "openbsd"
 
 Show name => ShowB (Extern name) where
     showB ext = indent 1 $ showB @{FromShow} ext.extName <+> " :: " <+> showB ext.type
 
 export
 Foldable t => Show name => ShowB (t (Extern name)) where
-    showB exts0 =
-        let exts = collectExts exts0
-         in whenCons exts.primopPure ("primop pure"
-            <+> nl1Sep exts.primopPure)
-            <+> whenCons exts.primopEffectful ("primop effectful"
-            <+> nl1Sep exts.primopEffectful)
-            <+> whenCons exts.ffiPure ("ffi pure"
-            <+> nl1Sep exts.ffiPure)
-            <+> whenCons exts.ffiEffectful ("ffi effectful"
-            <+> nl1Sep exts.ffiEffectful)
+    showB exts = foldMap showExt exts
+      where
+        showLib : (OS, String) -> Builder
+        showLib (os, lib) = "\n    " <+> showB os <+> " \"" <+> fromString lib <+> "\""
+        showExt : Extern name -> Builder
+        showExt ext =
+            (case ext.prim of
+                Primop => "primop "
+                FFI => "ffi ")
+            <+> (case ext.eff of
+                NoEffect => "pure"
+                Effect => "effectful")
+            <+> foldMap showLib ext.libs
+            <+> "\n"
+            <+> showB ext
+
 
 export
 Show name => ShowB (Prog name) where

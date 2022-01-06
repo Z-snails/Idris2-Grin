@@ -5,6 +5,7 @@ import Data.SortedSet
 import Libraries.Data.IntMap
 
 import Compiler.Common
+import Core.Context.Context
 import Core.CompileExpr
 import Core.Core
 import Core.TT
@@ -179,12 +180,17 @@ data GName : Type where
     IdrName : Name -> GName
     FFIName : String -> GName
     GrinName : GrinFn -> GName
-    PrimName : PrimFn arity -> GName
-    PrimFunc : PrimFn arity -> GName
+    PrimName : PrimFn ar -> GName
+    PrimFunc : PrimFn ar -> GName
     ConstName : Constant -> GName
 
 quote : String -> String
 quote s = "\"" ++ s ++ "\""
+
+showUN : UserName -> String
+showUN (Basic x) = x
+showUN (Field x) = "rf-\{x}"
+showUN Underscore = "_"
 
 export
 Show GName where
@@ -192,11 +198,10 @@ Show GName where
       where
         showFull : Name -> String
         showFull (NS ns n) = fastConcat [showNSWithSep "." ns, ".", showFull n]
-        showFull (UN str) = str
+        showFull (UN un) = showUN un
         showFull (MN str i) = fastConcat ["{", str, ":", show i, "}"]
         showFull (PV n d) = fastConcat ["{P:", showFull n, ":", show d]
         showFull (DN _ n) = showFull n
-        showFull (RF s) = fastConcat ["rf_", s]
         showFull (Nested (x, y) n) = fastConcat [show x, ":", show y, ":", showFull n]
         showFull (CaseBlock str i) = fastConcat ["cb_", str, show i]
         showFull (WithBlock str i) = fastConcat ["wb_", str, show i]
@@ -338,23 +343,22 @@ newVar = do
 
 constant :
     (onInteger : Constant -> Integer -> r) ->
-    (onInt : Constant -> Int -> r) ->
     (onString : Constant -> String -> r) ->
     (onChar : Constant -> Char -> r) ->
     (onDouble : Constant -> Double -> r) ->
     (onNone : Constant -> r) ->
     Constant -> r
-constant onBI onI onStr onCh onD onC c = case c of
-    I x   => onI c x
-    I8 x  => onBI c x
-    I16 x => onBI c x
-    I32 x => onBI c x
-    I64 x => onBI c x
-    BI x  => onBI c x
-    B8 x  => onI c x
-    B16 x => onI c x
-    B32 x => onI c x
-    B64 x => onBI c x
+constant onI onStr onCh onD onC c = case c of
+    I x   => onI c $ cast x
+    I8 x  => onI c $ cast x
+    I16 x => onI c $ cast x
+    I32 x => onI c $ cast x
+    I64 x => onI c $ cast x
+    BI x  => onI c x
+    B8 x  => onI c $ cast x
+    B16 x => onI c $ cast x
+    B32 x => onI c $ cast x
+    B64 x => onI c $ cast x
     Str x => onStr c x
     Ch x  => onCh c x
     Db x  => onD c x
@@ -364,7 +368,6 @@ export
 getConstantLitPat : Constant -> CasePat GName
 getConstantLitPat = constant
     (\_ => LitPat . LInt)
-    (\_ => LitPat . LInt . cast)
     (\_ => LitPat . LString)
     (\_ => LitPat . LChar)
     (\_ => LitPat . LDouble)
@@ -377,14 +380,12 @@ getConstantNodePat v = constant
     (\c, _ => NodePat (MkTag Con (ConstName c)) [v])
     (\c, _ => NodePat (MkTag Con (ConstName c)) [v])
     (\c, _ => NodePat (MkTag Con (ConstName c)) [v])
-    (\c, _ => NodePat (MkTag Con (ConstName c)) [v])
     (\c => NodePat (MkTag Con (ConstName c)) [])
 
 export
 anfConstant : Constant -> Val GName
 anfConstant = constant
     (\c, x => ConstTagNode (MkTag Con (ConstName (removeVal c))) [SLit $ LInt x])
-    (\c, x => ConstTagNode (MkTag Con (ConstName (removeVal c))) [SLit $ LInt $ cast x])
     (\c, x => ConstTagNode (MkTag Con (ConstName (removeVal c))) [SLit $ LString x])
     (\c, x => ConstTagNode (MkTag Con (ConstName (removeVal c))) [SLit $ LChar x])
     (\c, x => ConstTagNode (MkTag Con (ConstName (removeVal c))) [SLit $ LDouble x])
@@ -414,13 +415,11 @@ unwrapConstant v = constant
     (\c, _ => ConstTagNode (MkTag Con (ConstName c)) [SVar v])
     (\c, _ => ConstTagNode (MkTag Con (ConstName c)) [SVar v])
     (\c, _ => ConstTagNode (MkTag Con (ConstName c)) [SVar v])
-    (\c, _ => ConstTagNode (MkTag Con (ConstName c)) [SVar v])
     (\c => VVar v)
 
 export
 wrapConstant : Var -> Constant -> Val GName
 wrapConstant v = constant
-    (\c, _ => ConstTagNode (MkTag Con (ConstName c)) [SVar v])
     (\c, _ => ConstTagNode (MkTag Con (ConstName c)) [SVar v])
     (\c, _ => ConstTagNode (MkTag Con (ConstName c)) [SVar v])
     (\c, _ => ConstTagNode (MkTag Con (ConstName c)) [SVar v])
@@ -477,8 +476,9 @@ isEff : CFType -> Effectful
 isEff (CFIORes _) = Effect
 isEff _ = NoEffect
 
-export
-getCC : List String -> Maybe String
+export covering
+getCC : List String -> Maybe (String, Maybe String)
 getCC ccs = case parseCC ["C"] ccs of
-    Just (_, (fn :: _)) => Just fn
+    Just (_, [fn]) => Just (fn, Nothing)
+    Just (_, (fn :: lib ::_)) => Just (fn, Just lib)
     _ => Nothing
