@@ -1,0 +1,7 @@
+GRIN is a low-level program representation, ideal for optimising lazy and strict functional languages.
+
+In this talk I will discuss what GRIN looks like, and how various concepts are represented.
+
+With luck I'll demonstrate the GRIN backend compiling and optimising Idris2 programs.
+
+And I'll also outline what there is left to do.

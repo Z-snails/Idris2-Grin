@@ -46,8 +46,8 @@ extra-deps:
 - llvm-hs-pretty-0.6.1.0
 - monad-gen-0.3.0.1@sha256:a2569465cfbd468d3350ef25de56b3362580e77537224313aab1210f40804a3b,821
 - set-extra-1.4.1@sha256:c58aa620704f609f289953e7c1f9c1653fd1498f0984b0f03a3f8f38f7ed5a84,533
-- github: Z-snails/grin
-  commit: 0ac74dc2da646ccead502a953ee8dd1d0c77adb4
+- github: grin-compiler/grin
+  commit: 4b68b848838d289573b59fae2272e6971fddb99f
   subdirs:
   - grin
 - github: csabahruska/llvm-hs

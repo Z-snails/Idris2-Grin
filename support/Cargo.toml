@@ -9,5 +9,8 @@ edition = "2021"
 name = "idris2Grinsupport"
 crate-type = ["cdylib"]
 
-[dependencies]
-rug = "1.14.0"
+[dependencies.rug]
+version = "1.14.0"
+default-features = false
+features = ["integer"]
+

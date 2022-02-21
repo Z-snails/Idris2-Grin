@@ -64,5 +64,5 @@ resolve orig = do
         Just res => pure $ MkResolved res orig
         Nothing => do
             let res = st.nextId
-            put (record { nextId $= (+ 1), resolved $= insert orig res } st)
+            put ({ nextId $= (+ 1), resolved $= insert orig res } st)
             pure $ MkResolved res orig

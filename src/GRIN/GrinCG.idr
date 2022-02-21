@@ -28,33 +28,6 @@ import GRIN.Pipeline
 import GRIN.Name
 import GRIN.GrinM
 
-getSaveIR : List String -> Bool
-getSaveIR [] = False
-getSaveIR (d :: ds) = trim d == "save-ir" || getSaveIR ds
-
-getDoOpts : List String -> Bool
-getDoOpts [] = True
-getDoOpts (d :: ds) = trim d /= "no-opts" && getDoOpts ds
-
-getSkipCG : List String -> Bool
-getSkipCG [] = False
-getSkipCG (d :: ds) = trim d == "skip-cg" || getSkipCG ds
-
-getDoStats : List String -> Bool
-getDoStats [] = False
-getDoStats (d :: ds) = trim d == "stats" || getDoStats ds
-
-getDoLog : List String -> Bool
-getDoLog [] = False
-getDoLog (d :: ds) = trim d == "logging" || getDoLog ds 
-
-getOptimise : List String -> Bool
-getOptimise [] = False
-getOptimise (d :: ds) =
-    trim d == "optimse"
-    || trim d == "optimize"
-    || getOptimise ds
-
 ShowB GName where
     showB = showB @{FromShow}
 
@@ -79,9 +52,12 @@ compileExpr post d tmpDir outDir term outFile = do
         outLLFile = outDir </> outFile
 
     ds <- getDirectives (Other "grin")
-    let doOpts = getDoOpts ds
-    let saveIR = getSaveIR ds
-    let skipCG = getSkipCG ds
+    let doOpts = not $ elem "no-opts" ds
+    let saveIR = elem "save-ir" ds
+    let skipCG = elem "skip-cg" ds
+    doLog <- unverifiedLogging "grin" 10
+    let doLog = doLog || elem "logging" ds
+    let printProg = elem "print" ds
 
     Right _ <- coreLift $ mkdirAll appDir
         | Left err => throw $ FileErr appDir err
@@ -130,21 +106,20 @@ compileExpr post d tmpDir outDir term outFile = do
     let [] = getErrors st
         | errs => throw $ InternalError $ "Error running optimisations\n" ++ show errs
 
-    doLog <- unverifiedLogging "grin" 10
-    let doLog = doLog || getDoLog ds
-
     let grinc = "grinIdris2-exe"
-    let grinCMD =
-            grinc
-            ++ " \"" ++ (outDir </> outFile ++ "_app")
-            ++ "\" \""  ++ outGrinFile ++ "\""
-            ++ (if doLog then " --logging" else "")
-            ++ (if saveIR then " --save-ir" else "")
-            ++ (case post of 
+    let grinCMD = fastConcat
+            [ grinc
+            , " \"" ++ (outDir </> outFile ++ "_app")
+            , "\" \""  ++ outGrinFile ++ "\""
+            , (if doLog then " --logging" else "")
+            , (if saveIR then " --save-ir" else "")
+            , (case post of 
                     Eval => " --eval"
                     EvalWithStats => " --eval-stats"
                     SaveLLVM => " --save-llvm \"" ++ (outDir </> outFile) ++ "\"")
-            ++ (if doOpts then " --optimise" else "")
+            , (if doOpts then " --optimise" else "")
+            , (if printProg then " --print" else "")
+            ]
 
     unverifiedLogC "grin" 10 $ pure grinCMD
     unless skipCG $ (coreLift $ system grinCMD) >>= \case
@@ -160,7 +135,7 @@ executeExpr :
 executeExpr d tmpDir term = do
     addDirective "grin" "logging"
     ds <- getDirectives (Other "grin")
-    if getDoStats ds
+    if elem "stats" ds
         then ignore $ compileExpr EvalWithStats d tmpDir tmpDir term "execute"
         else ignore $ compileExpr Eval d tmpDir tmpDir term "execute"
 

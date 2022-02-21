@@ -3,6 +3,8 @@ module GRIN.PrettyCompatB
 
 import Data.SortedMap
 import Data.String.Builder
+import Data.String
+import Data.List
 
 import GRIN.AST
 import GRIN.Name
@@ -12,13 +14,6 @@ import GRIN.Name
 export
 ShowB Var where
     showB (MkVar i) = "v" <+> showB @{FromShow} i
-
-export
-ShowB TagType where
-    showB Con = "C"
-    showB UThunk = "FU"
-    showB NUThunk = "FNU"
-    showB (Partial missing) = "P" <+> showB @{FromShow} missing
 
 escapeChar : Char -> String
 escapeChar = \case
@@ -33,21 +28,52 @@ escapeChar = \case
     '\v' => "\\v"
     c => cast c
 
-escapeString : String -> Builder
-escapeString = fromString . fastConcat . map escapeChar . unpack
+escapeString : String -> String
+escapeString = fastConcat . map escapeChar . unpack
 
 escapeBuilder : Builder -> Builder
 escapeBuilder = mapString $ fastConcat . map escapeChar . unpack
 
+validInitial : Char -> Bool
+validInitial c = isAlpha c || c == '_' || c == '.'
+
+validTail : Char -> Bool
+validTail c = isAlphaNum c || (c `elem` unpack "._':!@-")
+
+validName : String -> Bool
+validName str = case strM str of
+    StrNil => True
+    StrCons h t => validInitial h && all validTail (fastUnpack t)
+
+requiresQuote : String -> Bool
+requiresQuote = not . validName
+
+showQuoted : TagType -> String -> String
+showQuoted Con tag = "C\"\{escapeString tag}\""
+showQuoted UThunk tag = "F\"\{escapeString tag}\""
+showQuoted NUThunk tag = "F\"NU\{escapeString tag}\""
+showQuoted (Partial p) tag = "P\{show p}\"\{escapeString tag}\""
+
+export
+ShowB TagType where
+    showB Con = "C"
+    showB UThunk = "F"
+    showB NUThunk = "FNU"
+    showB (Partial p) = fromString $ "P" ++ show p
+
 export
 Show name => ShowB (Tag name) where
-    showB (MkTag tagType tag) = "C\"" <+> showB tagType <+> escapeString (show tag) <+> "\""
+    showB (MkTag tagType tag) =
+        let tag = show tag
+         in if requiresQuote tag
+            then fromString $ showQuoted tagType tag
+            else showB tagType <+> fromString tag
 
 export
 ShowB Lit where
     showB (LInt i) = showB @{FromShow} i
     showB (LDouble x) = showB @{FromShow} x
-    showB (LString s) = "#\"" <+> escapeString s <+> "\""
+    showB (LString s) = "#\"" <+> fromString (escapeString s) <+> "\""
     showB (LChar c) = "#'" <+> fromString (escapeChar c) <+> "'"
 
 ShowB IntPrec where
@@ -158,11 +184,11 @@ collectExts = foldl addExtern initExterns
     addExtern : Externs name -> Extern name -> Externs name
     addExtern exts ext = case ext.prim of
         Primop => case ext.eff of
-            NoEffect => record { primopPure $= (ext ::) } exts
-            Effect => record { primopEffectful $= (ext ::) } exts
+            NoEffect => { primopPure $= (ext ::) } exts
+            Effect => { primopEffectful $= (ext ::) } exts
         FFI => case ext.eff of
-            NoEffect => record { ffiPure $= (ext ::) } exts
-            Effect => record { ffiEffectful $= (ext ::) } exts
+            NoEffect => { ffiPure $= (ext ::) } exts
+            Effect => { ffiEffectful $= (ext ::) } exts
 
 ShowB OS where
     showB Darwin = "darwin"

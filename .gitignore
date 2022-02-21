@@ -20,3 +20,7 @@ depends
 idris2Grin.ipkg
 # cargo
 support/target
+# support
+*.so
+# talk
+community-talk/**/*

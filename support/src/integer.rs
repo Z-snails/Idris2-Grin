@@ -2,15 +2,16 @@
 use rug::Integer;
 
 #[no_mangle]
-unsafe extern "C" fn _prim_add_Integer(x: *mut Integer, y: *mut Integer) -> *mut Integer {
-    Box::into_raw(Box::new(Integer::from(
-        *Box::from_raw(x) + *Box::from_raw(y),
-    )))
+pub extern "C" fn _prim_add_Integer(x: &Integer, y: &Integer) -> Box<Integer> {
+    Box::new(Integer::from(x + y))
 }
 
 #[no_mangle]
-unsafe extern "C" fn _prim_sub_Integer(x: *mut Integer, y: *mut Integer) -> *mut Integer {
-    Box::into_raw(Box::new(Integer::from(
-        *Box::from_raw(x) + *Box::from_raw(y),
-    )))
+pub extern "C" fn _prim_sub_Integer(x: &Integer, y: &Integer) -> Box<Integer> {
+    Box::new(Integer::from(x - y))
+}
+
+#[no_mangle]
+pub extern "C" fn _prim_clear_Integer(x: Box<Integer>) {
+    drop(x);
 }
