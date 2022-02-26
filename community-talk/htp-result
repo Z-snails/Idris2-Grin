@@ -1,0 +1,33 @@
+-- generate with: grin --ia hpt.grin --hpt-opt --print-hpt-result
+
+Heap
+    0      -> {CInt[{T_Int64}]}
+    1      -> {CInt[{T_Int64}]}
+Env
+    arg.0  -> {0}
+    arg.1  -> {1}
+    fn.0   -> {P2foo[]}
+    fn.1   -> {P1foo[{0}]}
+    foo.x  -> {0}
+    foo.x0 -> {T_Int64}
+    foo.y  -> {1}
+    foo.y0 -> {T_Int64}
+    foo.z  -> {T_Int64}
+    main.10 -> {0}
+    main.20 -> {1}
+    main.x -> {P2foo[]}
+    main.y -> {P1foo[{0}]}
+    main.z -> {CInt[{T_Int64}]}
+    main.z0 -> {T_Int64}
+    x.0    -> {}
+    x.1    -> {0}
+Function
+    _prim_int_add :: {T_Int64}
+                  -> {T_Int64}
+                  -> {T_Int64}
+    _prim_int_print :: {T_Int64}
+                    -> {T_Unit}
+    foo :: {0}
+        -> {1}
+        -> {CInt[{T_Int64}]}
+    grinMain :: {T_Unit}

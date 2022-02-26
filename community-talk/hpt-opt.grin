@@ -1,0 +1,16 @@
+
+foo foo.x foo.y =
+  (CInt foo.x0) <- fetch foo.x
+  (CInt foo.y0) <- fetch foo.y
+  foo.z <- _prim_int_add $ foo.x0 foo.y0
+  pure (CInt foo.z)
+
+grinMain =
+  main.10 <- store (CInt 10)
+  main.20 <- store (CInt 20)
+  main.x <- pure (P2foo)
+  main.y <- pure (P1foo main.10)
+  (P1foo x.1) <- pure main.y
+  main.z <- foo $ x.1 main.20
+  (CInt main.z0) <- pure main.z
+  _prim_int_print $ main.z0

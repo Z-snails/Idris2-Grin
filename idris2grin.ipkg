@@ -19,10 +19,10 @@ depends = contrib, grin, network, idris2
 modules = GRIN.ANFToGRIN, GRIN.Data, GRIN.GrinCG, GRIN.PrimOps, Main
 
 -- main file (i.e. file to load at REPL)
--- main =
+main = Main
 
 -- name of executable
--- executable =
+executable = idris2grin
 -- opts =
 sourcedir = "src"
 -- builddir =

@@ -1,0 +1,22 @@
+apply fn arg =
+    case fn of
+        (P1foo x) ->
+            foo x arg
+        (P2foo) ->
+            pure (P1foo arg)
+
+foo foo.x foo.y =
+    (CInt foo.x0) <- fetch foo.x
+    (CInt foo.y0) <- fetch foo.y
+    foo.z <- _prim_int_add foo.x0 foo.y0
+    pure (CInt foo.z)
+
+grinMain =
+    main.10 <- store (CInt 10)
+    main.20 <- store (CInt 20)
+
+    main.x <- pure (P2foo)
+    main.y <- apply main.x main.10
+    main.z <- apply main.y main.20
+    (CInt main.z0) <- pure main.z
+    _prim_int_print main.z0

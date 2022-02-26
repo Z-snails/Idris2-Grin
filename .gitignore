@@ -23,4 +23,5 @@ support/target
 # support
 *.so
 # talk
-community-talk/**/*
+community-talk/?*/*
+community-talk/*.out

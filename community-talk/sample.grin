@@ -1,0 +1,26 @@
+-- slide 2
+
+primop pure
+    _prim_int_add :: T_Int64 -> T_Int64 -> T_Int64
+    _prim_int_sub :: T_Int64 -> T_Int64 -> T_Int64
+    _prim_int_mul :: T_Int64 -> T_Int64 -> T_Int64
+    _prim_int_le :: T_Int64 -> T_Int64 -> T_Bool
+
+ffi effectful
+    _prim_int_print :: T_Int64 -> T_Unit
+
+add_four add_four.x =
+    _prim_int_add add_four.x 4
+
+fact fact.n =
+    fact.lt <- _prim_int_le fact.n 1
+    case fact.lt of
+        #True -> pure 1
+        #False ->
+            fact.pred <- _prim_int_sub fact.n 1
+            fact.res <- fact fact.pred
+            _prim_int_mul fact.pred fact.res
+
+grinMain =
+    main.result <- fact 10
+    _prim_int_print main.result

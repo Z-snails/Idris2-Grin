@@ -1,0 +1,12 @@
+plus plus.x plus.y =
+    (CInt plus.x0) <- fetch plus.x
+    (CInt plus.y0) <- fetch plus.y
+    plus.z <- _prim_int_add plus.x0 plus.y0
+    pure (CInt plus.z)
+
+grinMain =
+    main.x <- store (CInt 10)
+    main.y <- store (CInt 20)
+    main.z <- plus main.x main.y
+    (CInt main.z0) <- pure main.z
+    _prim_int_print main.z0
