@@ -67,7 +67,7 @@ runOpt (InlineFunc fn) = do
     ds <- gets $ defs . prog
     case lookup fn ds of
         Nothing => pure ()
-        Just def => modify $ record { toInline = singleton fn def }
+        Just def => modify { toInline := singleton fn def }
     inlineAll
 runOpt NormaliseBind = normaliseBind
 runOpt UnusedConstructorElim = unusedConsElim

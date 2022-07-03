@@ -49,5 +49,5 @@ inlineAll = do
         else do
             MkProg exts defs m <- gets prog
             defs' <- traverse (inlineDef im) defs
-            modify $ record { prog = MkProg exts defs' m }
+            modify { prog := MkProg exts defs' m }
             invalidate CallGraphs

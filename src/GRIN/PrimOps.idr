@@ -72,7 +72,7 @@ charTag = mkConstTag $ Ch '\0'
 doubleTag : Tag GName
 doubleTag = mkConstTag $ Db 0.0
 
-intTags : List (Constant, Tag GName)
+intTags : List (PrimType, Tag GName)
 intTags =
     [ (IntType, intTag)
     , (Int8Type, int8Tag), (Int16Type, int16Tag), (Int32Type, int32Tag), (Int64Type, int64Tag)
@@ -80,7 +80,7 @@ intTags =
     , (IntegerType, integerTag)
     ]
 
-cmpTags : List (Constant, Tag GName)
+cmpTags : List (PrimType, Tag GName)
 cmpTags = [(StringType, stringTag), (CharType, charTag), (DoubleType, doubleTag)] ++ intTags
 
 concatTraverse : (a -> Core (List b)) -> List a -> Core (List b)
@@ -99,10 +99,10 @@ primOps = concatCore
     , miscOps
     ]
   where
-    mkBinOps : (Constant, Tag GName) -> Core (List (Def GName))
+    mkBinOps : (PrimType, Tag GName) -> Core (List (Def GName))
     mkBinOps (ty, tag) = traverse (\fn => primOp [tag, tag] fn tag) [Add ty, Sub ty, Mul ty, Div ty]
 
-    mkCmpOps : (Constant, Tag GName) -> Core (List (Def GName))
+    mkCmpOps : (PrimType, Tag GName) -> Core (List (Def GName))
     mkCmpOps (ty, tag) = traverse (\fn => primOp [tag, tag] fn intTag) [LT ty, LTE ty, EQ ty, GTE ty, GT ty]
 
     stringOps : Core (List (Def GName))

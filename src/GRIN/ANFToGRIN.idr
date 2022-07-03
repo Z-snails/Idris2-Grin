@@ -271,43 +271,43 @@ addEvalAlt :
     Ref Build BProg =>
     (Var -> Core (Alt GName)) ->
     Core ()
-addEvalAlt alt = update Build $ record { eval $= \ev, ptr => (::) <$> alt ptr `Core.(<*>)` ev ptr }
+addEvalAlt alt = update Build { eval $= \ev, ptr => (::) <$> alt ptr `Core.(<*>)` ev ptr }
 
 addEvalAlts :
     Ref Build BProg =>
     (Var -> Core (List (Alt GName))) ->
     Core ()
-addEvalAlts alts = update Build $ record { eval $= \ev, ptr => (++) <$> alts ptr `Core.(<*>)` ev ptr }
+addEvalAlts alts = update Build { eval $= \ev, ptr => (++) <$> alts ptr `Core.(<*>)` ev ptr }
 
 addApplyAlt :
     Ref Build BProg =>
     ((arg : Var) -> Alt GName) ->
     Core ()
-addApplyAlt alt = update Build $ record { apply $= \app, arg => alt arg :: app arg }
+addApplyAlt alt = update Build { apply $= \app, arg => alt arg :: app arg }
 
 addApplyUAlt :
     Ref Build BProg =>
     ((arg : Var) -> Alt GName) ->
     Core ()
-addApplyUAlt alt = update Build $ record { applyU $= \app, arg => alt arg :: app arg }
+addApplyUAlt alt = update Build { applyU $= \app, arg => alt arg :: app arg }
 
 addApplyNUAlt :
     Ref Build BProg =>
     ((arg : Var) -> Alt GName) ->
     Core ()
-addApplyNUAlt alt = update Build $ record { applyNU $= \app, arg => alt arg :: app arg }
+addApplyNUAlt alt = update Build { applyNU $= \app, arg => alt arg :: app arg }
 
 addDef :
     Ref Build BProg =>
     Def GName ->
     Core ()
-addDef def = update Build $ record { defs $= (def ::) }
+addDef def = update Build { defs $= (def ::) }
 
 addExtern :
     Ref Build BProg =>
     Extern GName ->
     Core ()
-addExtern ext = update Build $ record { externs $= (ext ::) }
+addExtern ext = update Build { externs $= (ext ::) }
 
 addFnEval :
     Ref NextVar Var =>

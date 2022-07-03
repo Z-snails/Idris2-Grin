@@ -1,0 +1,4 @@
+[custom.all.grin]
+type = "local"
+path = "./grin"
+ipkg = "grin.ipkg"

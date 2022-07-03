@@ -70,11 +70,11 @@ parameters (used : SortedSet Var)
 removeUnusedDef : Def name -> Def name
 removeUnusedDef def =
     let used = collectUsedExp def.body
-     in record { body $= removeUnusedExp used } def
+     in { body $= removeUnusedExp used } def
 
 export
 unusedVarElim : Monad m => Ord name => GrinT name m ()
 unusedVarElim = do
     p@(MkProg exts defs _) <- gets prog
-    putProg $ record { defs = map removeUnusedDef defs } p
+    putProg $ { defs := map removeUnusedDef defs } p
     -- invalidate CallGraph

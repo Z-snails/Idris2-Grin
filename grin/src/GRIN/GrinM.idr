@@ -49,19 +49,19 @@ HasIO m => HasIO (GrinT name m) where
 
 export
 mapProg : Monad m => (Prog name -> Prog name) -> GrinT name m ()
-mapProg f = modify $ record { prog $= f }
+mapProg f = modify { prog $= f }
 
 export
 putProg : Monad m => Prog name -> GrinT name m ()
-putProg p = modify $ record { prog = p }
+putProg p = modify { prog := p }
 
 export
 invalidate : Monad m => AnalysisTag -> GrinT name m ()
 invalidate t = modify $ case t of
-    CallsGraph => record { calls = Nothing }
-    CalledByGraph => record { calledBy = Nothing }
-    CallGraphs => record { calls = Nothing, calledBy = Nothing }
-    Effects => record { effectMap = Nothing }
+    CallsGraph => { calls := Nothing }
+    CalledByGraph => { calledBy := Nothing }
+    CallGraphs => { calls := Nothing, calledBy := Nothing }
+    Effects => { effectMap := Nothing }
 
 export
 getCalls : Monad m => Ord name => GrinT name m (CallGraph name)
@@ -70,7 +70,7 @@ getCalls = do
         | Just cg => pure cg
     p <- gets prog
     let cg = callsGraph p
-    modify $ record { calls = Just cg }
+    modify { calls := Just cg }
     pure cg
 
 export
@@ -80,7 +80,7 @@ getCalledBy = do
         | Just cg => pure cg
     calls <- getCalls
     let cg = calledByGraph calls
-    modify $ record { calledBy = Just cg }
+    modify { calledBy := Just cg }
     pure cg
 
 export
@@ -89,11 +89,11 @@ liftGrinM f (MkGrinM (ST m)) = MkGrinM $ ST $ \st => f $ m st
 
 export
 newError : Monad m => Error -> GrinT name m ()
-newError err = modify $ record { errors $= (err ::) }
+newError err = modify { errors $= (err ::) }
 
 export
 resetVarMap : Monad m => GrinT name m ()
-resetVarMap = modify $ record { varMap = empty }
+resetVarMap = modify { varMap := empty }
 
 export
 runGrinT' : GrinT name m a -> GrinState name -> m (GrinState name, a)

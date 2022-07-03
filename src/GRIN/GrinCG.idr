@@ -64,9 +64,9 @@ compileExpr post d tmpDir outDir term outFile = do
 
     cdata <- getCompileData True ANF term
 
-    prog0 <- logTime "++ Compile ANF to GRIN" $ compileANF cdata.anf
+    prog0 <- logTime 10 "++ Compile ANF to GRIN" $ compileANF cdata.anf
 
-    prog1 <- logTime "++ Resolve names" $ pure $ runResolveM $ traverseProg resolve prog0
+    prog1 <- logTime 10 "++ Resolve names" $ pure $ runResolveM $ traverseProg resolve prog0
 
     let pipeline : List (Transform (Resolved GName))
         pipeline =
@@ -97,7 +97,7 @@ compileExpr post d tmpDir outDir term outFile = do
             , SaveGrin True outGrinFile
             ]
 
-    st <- logTime "++ Run optimisations" $ coreLift $ execGrinT' (runTransforms $
+    st <- logTime 10 "++ Run optimisations" $ coreLift $ execGrinT' (runTransforms $
             if doOpts
                 then pipeline
                 else [ SaveGrin True outGrinFile ])

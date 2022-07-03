@@ -28,7 +28,7 @@ VarM = State VarState
 
 export
 MonadVar VarM where
-    putVars vm = modify $ record { varMap = vm }
+    putVars vm = modify { varMap := vm }
     getVars = gets varMap
     updateVar v = do
         vm <- gets varMap
@@ -36,12 +36,12 @@ MonadVar VarM where
             Just v' => pure v'
             Nothing => do
                 v' <- gets nextVar
-                modify $ record { varMap $= insert v v', nextVar $= incVar }
+                modify { varMap $= insert v v', nextVar $= incVar }
                 pure v'
 
 export
 Monad m => MonadVar (GrinT name m) where
-    putVars vm = modify $ record { varMap = vm }
+    putVars vm = modify { varMap := vm }
     getVars = gets varMap
     updateVar v = do
         vm <- gets varMap
@@ -49,13 +49,13 @@ Monad m => MonadVar (GrinT name m) where
             Just v' => pure v'
             Nothing => do
                 v' <- gets nextVar
-                modify $ record { varMap $= insert v v', nextVar $= incVar }
+                modify { varMap $= insert v v', nextVar $= incVar }
                 pure v'
       where
         newVar : GrinT name m Var
         newVar = do
             v <- gets nextVar
-            modify $ record { nextVar $= incVar }
+            modify { nextVar $= incVar }
             pure v
 
 ||| Interface for types that contains `Var`s.

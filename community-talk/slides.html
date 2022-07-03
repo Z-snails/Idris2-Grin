@@ -79,6 +79,7 @@
 <h1>Optimisations</h1>
 <ul>
 <li>Many small optimisations/simplifications</li>
+<li><a href="#heap-points-to">Heap Points-to</a></li>
 <li><a href="#generalised-unboxing">Generalised unboxing</a>
 <ul>
 <li>2 parts</li>
@@ -87,6 +88,62 @@
 </ul>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="6">
+<h1>Heap Points-to</h1>
+<ul>
+<li>Explicit control flow</li>
+<li>Subset of all closures at each <code>apply</code></li>
+<li>Unboxing closure return values/arguments</li>
+<li>Eliminating higher order control flow</li>
+</ul>
+</section>
+</foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="7">
+<pre><code class="language-hs"><svg data-marp-fitting="svg" data-marp-fitting-code><foreignObject><span data-marp-fitting-svg-content><span data-marp-fitting-svg-content-wrap><span class="hljs-title">apply</span> fn arg =
+    <span class="hljs-keyword">case</span> fn <span class="hljs-keyword">of</span>
+        (<span class="hljs-type">P1foo</span> x) -&gt;
+            foo x arg
+        (<span class="hljs-type">P2foo</span>) -&gt;
+            pure (<span class="hljs-type">P1foo</span> arg)
+
+<span class="hljs-title">foo</span> foo.x foo.y =
+    (<span class="hljs-type">CInt</span> foo.x0) &lt;- fetch foo.x
+    (<span class="hljs-type">CInt</span> foo.y0) &lt;- fetch foo.y
+    foo.z &lt;- _prim_int_add foo.x0 foo.y0
+    pure (<span class="hljs-type">CInt</span> foo.z)
+
+<span class="hljs-title">grinMain</span> =
+    main<span class="hljs-number">.10</span> &lt;- store (<span class="hljs-type">CInt</span> <span class="hljs-number">10</span>)
+    main<span class="hljs-number">.20</span> &lt;- store (<span class="hljs-type">CInt</span> <span class="hljs-number">20</span>)
+
+    main.x &lt;- pure (<span class="hljs-type">P2foo</span>)
+    main.y &lt;- apply main.x main<span class="hljs-number">.10</span>
+    main.z &lt;- apply main.y main<span class="hljs-number">.20</span>
+    (<span class="hljs-type">CInt</span> main.z0) &lt;- pure main.z
+    _prim_int_print main.z0
+</span></span></foreignObject></svg></code></pre>
+</section>
+</foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="8">
+<p>After inlining <code>apply</code></p>
+<pre><code><svg data-marp-fitting="svg" data-marp-fitting-code><foreignObject><span data-marp-fitting-svg-content><span data-marp-fitting-svg-content-wrap>fn.0   -&gt; {P2foo[]}
+fn.1   -&gt; {P1foo[{0}]}
+</span></span></foreignObject></svg></code></pre>
+<ul>
+<li>Exact constructor is known</li>
+<li>Optimised to linear control flow</li>
+</ul>
+<pre><code class="language-hs"><svg data-marp-fitting="svg" data-marp-fitting-code><foreignObject><span data-marp-fitting-svg-content><span data-marp-fitting-svg-content-wrap><span class="hljs-title">foo</span> foo.x foo.y = <span class="hljs-comment">-- unchanged</span>
+
+<span class="hljs-title">grinMain</span> =
+    main<span class="hljs-number">.10</span> &lt;- store (<span class="hljs-type">CInt</span> <span class="hljs-number">10</span>)
+    main<span class="hljs-number">.20</span> &lt;- store (<span class="hljs-type">CInt</span> <span class="hljs-number">20</span>)
+    main.x &lt;- pure (<span class="hljs-type">P2foo</span>)
+    main.y &lt;- pure (<span class="hljs-type">P1foo</span> main<span class="hljs-number">.10</span>)
+    (<span class="hljs-type">P1foo</span> x<span class="hljs-number">.1</span>) &lt;- pure main.y
+    main.z &lt;- foo $ x<span class="hljs-number">.1</span> main<span class="hljs-number">.20</span>
+    (<span class="hljs-type">CInt</span> main.z0) &lt;- pure main.z
+    _prim_int_print $ main.z0
+</span></span></foreignObject></svg></code></pre>
+</section>
+</foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="9">
 <h1>Generalised unboxing</h1>
 <p>Unboxing returned values</p>
 <pre><code class="language-diff"><svg data-marp-fitting="svg" data-marp-fitting-code><foreignObject><span data-marp-fitting-svg-content><span data-marp-fitting-svg-content-wrap>plus plus.x plus.y =
@@ -107,7 +164,7 @@ grinMain =
     _prim_int_print main.z0
 </span></span></foreignObject></svg></code></pre>
 </section>
-</foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="7">
+</foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="10">
 <h1>Generalised unboxing</h1>
 <p>Arity raising (splitting arguments)</p>
 <pre><code class="language-diff"><svg data-marp-fitting="svg" data-marp-fitting-code><foreignObject><span data-marp-fitting-svg-content><span data-marp-fitting-svg-content-wrap>plus plus.x plus.y =

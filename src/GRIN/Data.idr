@@ -9,6 +9,7 @@ import Core.Context.Context
 import Core.CompileExpr
 import Core.Core
 import Core.TT
+import Core.Ord
 
 import GRIN.AST
 
@@ -19,117 +20,67 @@ replicate : Nat -> Core a -> Core (List a)
 replicate 0 _ = pure []
 replicate (S k) act = [| act :: replicate k act |]
 
--- missing instances
-namespace Instances
-    export
-    constantTag : Constant -> Int
-    constantTag (I _) = 0
-    constantTag (I8 _) = 1
-    constantTag (I16 _) = 2
-    constantTag (I32 _) = 3
-    constantTag (I64 _) = 4
-    constantTag (BI _) = 5
-    constantTag (B8 _) = 6
-    constantTag (B16 _) = 7
-    constantTag (B32 _) = 8
-    constantTag (B64 _) = 9
-    constantTag (Str _) = 10
-    constantTag (Ch _) = 11
-    constantTag (Db _) = 12
-    constantTag WorldVal = 13
-    constantTag IntType = 14
-    constantTag Int8Type = 15
-    constantTag Int16Type = 16
-    constantTag Int32Type = 17
-    constantTag Int64Type = 18
-    constantTag IntegerType = 19
-    constantTag Bits8Type = 20
-    constantTag Bits16Type = 21
-    constantTag Bits32Type = 22
-    constantTag Bits64Type = 23
-    constantTag StringType = 24
-    constantTag CharType = 25
-    constantTag DoubleType = 26
-    constantTag WorldType = 27
-
-    export
-    Ord Constant where
-        I x `compare` I y = compare x y
-        I8 x `compare` I8 y = compare x y
-        I16 x `compare` I16 y = compare x y
-        I32 x `compare` I32 y = compare x y
-        I64 x `compare` I64 y = compare x y
-        BI x `compare` BI y = compare x y
-        B8 x `compare` B8 y = compare x y
-        B16 x `compare` B16 y = compare x y
-        B32 x `compare` B32 y = compare x y
-        B64 x `compare` B64 y = compare x y
-        Str x `compare` Str y = compare x y
-        Ch x `compare` Ch y = compare x y
-        Db x `compare` Db y = compare x y
-        compare x y = compare (constantTag x) (constantTag y)
-
-    export
-    cmpPrimFn : PrimFn n -> PrimFn m -> Ordering
-    cmpPrimFn (Add x) (Add y) = compare x y
-    cmpPrimFn (Sub x) (Sub y) = compare x y
-    cmpPrimFn (Mul x) (Mul y) = compare x y
-    cmpPrimFn (Div x) (Div y) = compare x y
-    cmpPrimFn (Mod x) (Mod y) = compare x y
-    cmpPrimFn (Neg x) (Neg y) = compare x y
-    cmpPrimFn (ShiftL x) (ShiftL y) = compare x y
-    cmpPrimFn (ShiftR x) (ShiftR y) = compare x y
-    cmpPrimFn (BAnd x) (BAnd y) = compare x y
-    cmpPrimFn (BOr x) (BOr y) = compare x y
-    cmpPrimFn (BXOr x) (BXOr y) = compare x y
-    cmpPrimFn (LT x) (LT y) = compare x y
-    cmpPrimFn (LTE x) (LTE y) = compare x y
-    cmpPrimFn (EQ x) (EQ y) = compare x y
-    cmpPrimFn (GTE x) (GTE y) = compare x y
-    cmpPrimFn (GT x) (GT y) = compare x y
-    cmpPrimFn (Cast f1 t1) (Cast f2 t2) = compare f1 f2 <+> compare t1 t2
-    cmpPrimFn fn1 fn2 = tag fn1 `compare` tag fn2
-      where
-        tag : forall arity. PrimFn arity -> Int
-        tag (Add _) = 0
-        tag (Sub _) = 1
-        tag (Mul _) = 2
-        tag (Div _) = 3
-        tag (Mod _) = 4
-        tag (Neg _) = 5
-        tag (ShiftL _) = 6
-        tag (ShiftR _) = 7
-        tag (BAnd _) = 8
-        tag (BOr _) = 9
-        tag (BXOr _) = 10
-        tag (LT _) = 11
-        tag (LTE _) = 12
-        tag (EQ _) = 13
-        tag (GTE _) = 14
-        tag (GT _) = 15
-        tag StrLength = 16
-        tag StrHead = 17
-        tag StrTail = 18
-        tag StrIndex = 19
-        tag StrCons = 20
-        tag StrAppend = 21
-        tag StrReverse = 22
-        tag StrSubstr = 23
-        tag DoubleExp = 24
-        tag DoubleLog = 25
-        tag DoublePow = 26
-        tag DoubleSin = 27
-        tag DoubleCos = 28
-        tag DoubleTan = 29
-        tag DoubleASin = 30
-        tag DoubleACos = 31
-        tag DoubleATan = 32
-        tag DoubleSqrt = 33
-        tag DoubleFloor = 34
-        tag DoubleCeiling = 35
-        tag (Cast _ _) = 36
-        tag BelieveMe = 37
-        tag Crash = 38
+export
+cmpPrimFn : PrimFn n -> PrimFn m -> Ordering
+cmpPrimFn (Add x) (Add y) = compare x y
+cmpPrimFn (Sub x) (Sub y) = compare x y
+cmpPrimFn (Mul x) (Mul y) = compare x y
+cmpPrimFn (Div x) (Div y) = compare x y
+cmpPrimFn (Mod x) (Mod y) = compare x y
+cmpPrimFn (Neg x) (Neg y) = compare x y
+cmpPrimFn (ShiftL x) (ShiftL y) = compare x y
+cmpPrimFn (ShiftR x) (ShiftR y) = compare x y
+cmpPrimFn (BAnd x) (BAnd y) = compare x y
+cmpPrimFn (BOr x) (BOr y) = compare x y
+cmpPrimFn (BXOr x) (BXOr y) = compare x y
+cmpPrimFn (LT x) (LT y) = compare x y
+cmpPrimFn (LTE x) (LTE y) = compare x y
+cmpPrimFn (EQ x) (EQ y) = compare x y
+cmpPrimFn (GTE x) (GTE y) = compare x y
+cmpPrimFn (GT x) (GT y) = compare x y
+cmpPrimFn (Cast f1 t1) (Cast f2 t2) = compare f1 f2 <+> compare t1 t2
+cmpPrimFn fn1 fn2 = tag fn1 `compare` tag fn2
+  where
+    tag : forall arity. PrimFn arity -> Int
+    tag (Add _) = 0
+    tag (Sub _) = 1
+    tag (Mul _) = 2
+    tag (Div _) = 3
+    tag (Mod _) = 4
+    tag (Neg _) = 5
+    tag (ShiftL _) = 6
+    tag (ShiftR _) = 7
+    tag (BAnd _) = 8
+    tag (BOr _) = 9
+    tag (BXOr _) = 10
+    tag (LT _) = 11
+    tag (LTE _) = 12
+    tag (EQ _) = 13
+    tag (GTE _) = 14
+    tag (GT _) = 15
+    tag StrLength = 16
+    tag StrHead = 17
+    tag StrTail = 18
+    tag StrIndex = 19
+    tag StrCons = 20
+    tag StrAppend = 21
+    tag StrReverse = 22
+    tag StrSubstr = 23
+    tag DoubleExp = 24
+    tag DoubleLog = 25
+    tag DoublePow = 26
+    tag DoubleSin = 27
+    tag DoubleCos = 28
+    tag DoubleTan = 29
+    tag DoubleASin = 30
+    tag DoubleACos = 31
+    tag DoubleATan = 32
+    tag DoubleSqrt = 33
+    tag DoubleFloor = 34
+    tag DoubleCeiling = 35
+    tag (Cast _ _) = 36
+    tag BelieveMe = 37
+    tag Crash = 38
 
 public export
 data GrinFn
@@ -254,6 +205,23 @@ Show GName where
             Crash => "crash"
     show (ConstName c) = showConstName c
       where
+        showPrimType : PrimType -> String
+        showPrimType = \case
+            IntType => "IntType"
+            Int8Type => "Int8Type"
+            Int16Type => "Int16Type"
+            Int32Type => "Int32Type"
+            Int64Type => "Int64Type"
+            IntegerType => "IntegerType"
+            Bits8Type => "Bits8Type"
+            Bits16Type => "Bits16Type"
+            Bits32Type => "Bits32Type"
+            Bits64Type => "Bits64Type"
+            StringType => "StringType"
+            CharType => "CharType"
+            DoubleType => "DoubleType"
+            WorldType => "WorldType"
+
         showConstName : Constant -> String
         showConstName = \case
             I _ => "Int"
@@ -270,20 +238,7 @@ Show GName where
             Ch _ => "Char"
             Db _ => "Double"
             WorldVal => "MkWorld"
-            IntType => "IntType"
-            Int8Type => "Int8Type"
-            Int16Type => "Int16Type"
-            Int32Type => "Int32Type"
-            Int64Type => "Int64Type"
-            IntegerType => "IntegerType"
-            Bits8Type => "Bits8Type"
-            Bits16Type => "Bits16Type"
-            Bits32Type => "Bits32Type"
-            Bits64Type => "Bits64Type"
-            StringType => "StringType"
-            CharType => "CharType"
-            DoubleType => "DoubleType"
-            WorldType => "WorldType"
+            PrT ty => showPrimType ty
 
 export
 Eq GName where
@@ -292,7 +247,7 @@ Eq GName where
     GrinName n == GrinName m = n == m
     PrimName o == PrimName p = cmpPrimFn o p == EQ
     PrimFunc o == PrimFunc p = cmpPrimFn o p == EQ
-    ConstName c == ConstName d = constantTag c == constantTag d
+    ConstName c == ConstName d = c == d
     _ == _ = False
 
 export
@@ -302,7 +257,7 @@ Ord GName where
     GrinName n `compare` GrinName m = n `compare` m
     PrimName n `compare` PrimName m = n `cmpPrimFn` m
     PrimFunc n `compare` PrimFunc m = n `cmpPrimFn` m
-    ConstName c `compare` ConstName d = constantTag c `compare` constantTag d
+    ConstName c `compare` ConstName d = c `compare` d
     n `compare` m = tag n `compare` tag m
       where
         tag : GName -> Int

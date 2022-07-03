@@ -23,7 +23,7 @@ export
 inlineSimpleDefs : Ord name => Monad m => GrinT name m ()
 inlineSimpleDefs = do
     MkProg _ defs m <- gets prog
-    modify $ record { toInline =
+    modify { toInline :=
         delete m $ foldMap @{%search} @{MonoidMergeLeft} simpleDef defs }
 
 calledSExp : Eq name => name -> SExp name -> Nat
@@ -43,7 +43,7 @@ inlineUsedOnce = do
     ds <- gets $ defs . prog
     cg <- getCalls
     let toInline = foldr (addOne ds) empty $ Map.toList cg
-    modify $ record { toInline = toInline }
+    modify { toInline := toInline }
   where
     addOne : SortedMap name (Def name) -> (name, SortedSet name) -> SortedMap name (Def name) -> SortedMap name(Def name) 
     addOne ds (fn, callers) ins = case Set.toList callers of
